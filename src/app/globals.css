@@ -1,0 +1,189 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────── Base ─────────────────────────────── */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-ink text-text-hi font-sans antialiased;
+    background-image:
+      radial-gradient(1200px 620px at 50% -8%, rgba(233, 220, 195, 0.06), transparent 60%),
+      radial-gradient(900px 500px at 88% 4%, rgba(242, 169, 0, 0.05), transparent 55%);
+    background-attachment: fixed;
+    min-height: 100dvh;
+  }
+
+  ::selection {
+    background: rgba(233, 220, 195, 0.85);
+    color: #0b0b0a;
+  }
+
+  /* Scrollbar discreta */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(233, 220, 195, 0.22) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: rgba(233, 220, 195, 0.18);
+    border-radius: 999px;
+  }
+}
+
+/* ──────────────────────── Componentes ─────────────────────────── */
+@layer components {
+  /* Logo SIX — condensada, pesada. "SPORT LIFE" com tracking bem aberto. */
+  .six-wordmark {
+    @apply font-display uppercase leading-none tracking-[-0.01em];
+  }
+  .six-sub {
+    @apply font-heading uppercase font-medium tracking-[0.55em];
+  }
+
+  /* Sobrancelha: rótulo pequeno em versalete. */
+  .eyebrow {
+    @apply font-heading uppercase tracking-[0.34em] text-text-mid;
+  }
+
+  /* Título de categoria — versalete com espaçamento generoso (cardápio físico). */
+  .category-title {
+    @apply font-heading uppercase font-medium tracking-[0.28em];
+  }
+
+  /* Assinatura em serifa itálica — só "Drinks Six Health". */
+  .signature-title {
+    @apply font-serif italic;
+  }
+
+  .hairline {
+    @apply border-t border-hairline;
+  }
+
+  /* Cartão creme — a versão noturna do cartão físico sobre a mesa. */
+  .card-cream {
+    background: linear-gradient(180deg, #efe6d3 0%, #e9dcc3 55%, #e2d3b6 100%);
+    @apply text-ink rounded-xl2 shadow-card;
+  }
+
+  .surface-card {
+    @apply bg-surface/90 rounded-xl2 border border-hairline shadow-card backdrop-blur-sm;
+  }
+
+  /* Botões */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full font-heading uppercase
+           tracking-[0.14em] font-medium transition-all duration-200 ease-lux
+           disabled:opacity-40 disabled:pointer-events-none select-none;
+  }
+  .btn-primary {
+    @apply btn bg-cream text-ink px-6 py-3 hover:bg-cream-dim active:scale-[0.98]
+           shadow-[0_10px_30px_-12px_rgba(233,220,195,0.5)];
+  }
+  .btn-ghost {
+    @apply btn border border-hairline-strong text-text-hi px-6 py-3
+           hover:border-cream/60 hover:bg-white/5 active:scale-[0.98];
+  }
+  .btn-danger {
+    @apply btn border border-hibiscus/50 text-strawberry px-5 py-3
+           hover:bg-hibiscus/15 active:scale-[0.98];
+  }
+
+  /* Tag +18 discreta */
+  .tag-18 {
+    @apply inline-flex items-center rounded-full border border-hibiscus/45 text-hibiscus
+           text-[0.62rem] font-heading font-semibold tracking-widest px-2 py-0.5;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-hairline
+           px-3 py-1 text-xs text-text-mid;
+  }
+
+  .field-label {
+    @apply block font-heading uppercase tracking-[0.18em] text-xs text-text-mid mb-2;
+  }
+  .field-input {
+    @apply w-full rounded-xl bg-surface-2 border border-hairline px-4 py-3 text-text-hi
+           placeholder:text-text-low outline-none transition
+           focus:border-cream/50 focus:ring-2 focus:ring-cream/15;
+  }
+}
+
+/* ───────────────────── Motivo da anilha ───────────────────────── */
+/* Bullet em formato de anilha (disco de peso) para as categorias. */
+.plate-bullet {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  position: relative;
+  flex: none;
+  opacity: 0.9;
+}
+.plate-bullet::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 0.18rem;
+  height: 0.18rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+/* ───────────────────────── Utilitários ────────────────────────── */
+.text-balance {
+  text-wrap: balance;
+}
+
+.shimmer-bg {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  background-size: 900px 100%;
+}
+
+/* Esconde a scrollbar em trilhos horizontais (tabs de categoria). */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ─────────────────────── Impressão (/qr) ──────────────────────── */
+@media print {
+  @page {
+    size: A5;
+    margin: 0;
+  }
+  html,
+  body {
+    background: #e9dcc3 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-sheet {
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: 100% !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+  }
+}
