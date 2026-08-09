@@ -264,7 +264,10 @@ export function BarPanel({
             <Seal className="h-9 w-9 text-cream/80" />
             <div>
               <p className="eyebrow text-[0.55rem]">Painel do Bar</p>
-              <p className="font-heading text-lg uppercase leading-none tracking-wide">
+              <p
+                className="font-heading text-lg uppercase leading-none tracking-wide"
+                suppressHydrationWarning
+              >
                 {formatBarTime(now.toISOString())}
               </p>
             </div>

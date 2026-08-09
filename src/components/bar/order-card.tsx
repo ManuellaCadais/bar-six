@@ -72,6 +72,7 @@ export function OrderCard({
                 'font-heading text-2xl tabular-nums',
                 overdue ? 'text-hibiscus' : 'text-text-mid',
               )}
+              suppressHydrationWarning
             >
               {formatElapsed(order.created_at, now)}
             </p>
