@@ -151,6 +151,7 @@ Para repovoar do zero, rode novamente `supabase/seed.sql` (ele não duplica iten
 - O navegador usa a **chave anônima** só para **ler** cardápio e pedidos e para as **subscriptions de realtime** (fila do bar e tela do aluno).
 - **Toda escrita** (registrar pedido, mudar status, disponibilidade, CRUD, PINs) passa por **Server Actions** no servidor, usando a **service_role**. O servidor **reconstrói o pedido a partir dos IDs** e revalida as regras (bar aberto, categoria liberada no dia, item disponível) — nunca confia em preço/nome vindos do cliente.
 - **RLS** liga: leitura pública de cardápio/pedidos, leitura de `settings` só nas linhas públicas (o hash do PIN fica oculto), e **nenhuma** permissão de escrita para o anônimo.
+- O pedido e seus itens são gravados **numa única transação** (função `create_order` no Postgres, executável só pela `service_role`). Assim o evento de realtime só chega ao balcão depois do commit — o painel nunca mostra um card sem itens.
 - Os PINs são guardados como **hash** (SHA-256 com o `SESSION_SECRET`), nunca em texto puro.
 
 > Observação de privacidade (v1): como a fila do bar usa realtime com a chave anônima, os pedidos (nome + local) são legíveis por quem tiver a chave pública. Para um bar de academia isso é aceitável; a evolução para leitura autenticada está na v2.

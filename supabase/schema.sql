@@ -109,6 +109,78 @@ create trigger trg_orders_updated_at
   before update on public.orders
   for each row execute function public.set_updated_at();
 
+-- ─────────── Código curto único e legível (#A1B2) ──────────────────
+--  Alfabeto sem caracteres ambíguos (0/O, 1/I) para leitura no balcão.
+
+create unique index if not exists uq_orders_short_code on public.orders (short_code);
+
+create or replace function public.gen_short_code()
+returns text language plpgsql as $$
+declare
+  alphabet constant text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  code text;
+begin
+  loop
+    code := '';
+    for i in 1..4 loop
+      code := code || substr(alphabet, 1 + floor(random() * length(alphabet))::int, 1);
+    end loop;
+    exit when not exists (select 1 from public.orders o where o.short_code = code);
+  end loop;
+  return code;
+end;
+$$;
+
+-- ─────────── Criação atômica do pedido (pedido + itens) ────────────
+--  Grava tudo numa única transação: o evento de realtime só é emitido
+--  após o commit, então o painel do bar nunca recebe um card sem itens.
+--  SECURITY DEFINER + revoke: só a service_role (servidor) pode chamar.
+
+create or replace function public.create_order(
+  p_customer_name text,
+  p_location      text,
+  p_notes         text,
+  p_total         numeric,
+  p_items         jsonb
+)
+returns table (id uuid, short_code text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+#variable_conflict use_column
+declare
+  new_id   uuid;
+  new_code text;
+begin
+  if p_items is null or jsonb_array_length(p_items) = 0 then
+    raise exception 'Pedido sem itens';
+  end if;
+
+  new_code := public.gen_short_code();
+
+  insert into public.orders (short_code, customer_name, location, notes, status, total)
+  values (new_code, p_customer_name, p_location, p_notes, 'recebido', p_total)
+  returning orders.id into new_id;
+
+  insert into public.order_items (order_id, item_name, quantity, unit_price, selected_options)
+  select
+    new_id,
+    it->>'item_name',
+    (it->>'quantity')::int,
+    nullif(it->>'unit_price', '')::numeric,
+    coalesce(it->'selected_options', '[]'::jsonb)
+  from jsonb_array_elements(p_items) as it;
+
+  return query select new_id, new_code;
+end;
+$$;
+
+-- Só o servidor (service_role) pode criar pedidos: o cliente anônimo nunca
+-- chama esta função diretamente, sempre passa pela Server Action validada.
+revoke all on function public.create_order(text, text, text, numeric, jsonb) from public, anon, authenticated;
+grant execute on function public.create_order(text, text, text, numeric, jsonb) to service_role;
+
 -- ═══════════════════════ Row Level Security ════════════════════════
 --  Leitura pública do cardápio + pedidos (necessária para o realtime).
 --  TODA escrita de gestão passa por Server Actions com service_role,

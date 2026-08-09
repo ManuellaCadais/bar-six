@@ -55,11 +55,17 @@ export async function cancelOrder(orderId: string, reason: string): Promise<Resu
   await requireRole('bar');
   const sb = getAdminClient();
   const clean = (reason ?? '').trim().slice(0, 200) || 'Cancelado pelo bar.';
-  const { error } = await sb
+  // Só cancela pedidos ativos — nunca sobrescreve um já entregue/cancelado.
+  const { data, error } = await sb
     .from('orders')
     .update({ status: 'cancelado', cancel_reason: clean })
-    .eq('id', orderId);
-  return error ? { ok: false, message: 'Falha ao cancelar.' } : { ok: true };
+    .eq('id', orderId)
+    .in('status', ['recebido', 'preparo', 'pronto'])
+    .select('id');
+  if (error) return { ok: false, message: 'Falha ao cancelar.' };
+  if (!data || data.length === 0)
+    return { ok: false, message: 'Pedido já finalizado — não é possível cancelar.' };
+  return { ok: true };
 }
 
 /** Marca item disponível/indisponível (some do cardápio na hora). */

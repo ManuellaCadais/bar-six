@@ -70,7 +70,12 @@ export function BarPanel({
   const audioRef = useRef<AudioContext | null>(null);
   const soundOnRef = useRef(false);
 
-  const upsert = useCallback((order: Order) => {
+  /**
+   * `insert: false` só atualiza pedidos que já estão na tela.
+   * Usado no handler de UPDATE para não puxar pedidos de outros dias
+   * (editados em outra sessão) para a fila/histórico de hoje.
+   */
+  const upsert = useCallback((order: Order, insert = true) => {
     setOrders((prev) => {
       const i = prev.findIndex((o) => o.id === order.id);
       if (i >= 0) {
@@ -78,7 +83,7 @@ export function BarPanel({
         copy[i] = order;
         return copy;
       }
-      return [...prev, order];
+      return insert ? [...prev, order] : prev;
     });
   }, []);
 
@@ -121,7 +126,7 @@ export function BarPanel({
         { event: 'UPDATE', schema: 'public', table: 'orders' },
         async (payload) => {
           const order = await fetchOrder((payload.new as { id: string }).id);
-          if (order) upsert(order);
+          if (order) upsert(order, false);
         },
       )
       .on(

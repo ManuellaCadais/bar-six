@@ -22,15 +22,6 @@ export type SubmitOrderResult =
   | { ok: true; orderId: string; shortCode: string }
   | { ok: false; error: string; message: string };
 
-const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-function generateShortCode(): string {
-  let out = '';
-  for (let i = 0; i < 4; i++) {
-    out += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
-  }
-  return out;
-}
-
 /**
  * Registra um novo pedido.
  * O servidor RECONSTRÓI o pedido a partir dos IDs (nunca confia em preço/nome
@@ -182,21 +173,21 @@ export async function submitOrder(
     });
   }
 
+  // Grava pedido + itens numa ÚNICA transação (função create_order no Postgres).
+  // Isso garante que o evento de realtime só chegue ao painel do bar depois do
+  // commit — nunca um card sem itens — e gera um short_code único no servidor.
   const sb = getAdminClient();
-  const { data: order, error: orderErr } = await sb
-    .from('orders')
-    .insert({
-      short_code: generateShortCode(),
-      customer_name: name.slice(0, 60),
-      location,
-      notes: input.notes?.trim()?.slice(0, 300) || null,
-      status: 'recebido',
-      total: allPriced ? Number(total.toFixed(2)) : null,
+  const { data, error } = await sb
+    .rpc('create_order', {
+      p_customer_name: name.slice(0, 60),
+      p_location: location,
+      p_notes: input.notes?.trim()?.slice(0, 300) || null,
+      p_total: allPriced ? Number(total.toFixed(2)) : null,
+      p_items: orderItemsPayload,
     })
-    .select('id, short_code')
-    .single();
+    .single<{ id: string; short_code: string }>();
 
-  if (orderErr || !order) {
+  if (error || !data) {
     return {
       ok: false,
       error: 'db',
@@ -204,18 +195,5 @@ export async function submitOrder(
     };
   }
 
-  const { error: itemsErr } = await sb.from('order_items').insert(
-    orderItemsPayload.map((oi) => ({ ...oi, order_id: order.id })),
-  );
-
-  if (itemsErr) {
-    await sb.from('orders').delete().eq('id', order.id);
-    return {
-      ok: false,
-      error: 'db',
-      message: 'Falha ao registrar os itens. Tente novamente.',
-    };
-  }
-
-  return { ok: true, orderId: order.id, shortCode: order.short_code };
+  return { ok: true, orderId: data.id, shortCode: data.short_code };
 }
