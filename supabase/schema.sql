@@ -79,9 +79,13 @@ create table if not exists bar.orders (
                 check (status in ('recebido','preparo','pronto','entregue','cancelado')),
   cancel_reason text,
   total         numeric(10,2),
+  seen_at       timestamptz,                -- quando o bar confirmou que viu o pedido (silencia o alarme)
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
+
+-- Migração aditiva: se a tabela já existia (instalação anterior), garante a coluna.
+alter table bar.orders add column if not exists seen_at timestamptz;
 
 create table if not exists bar.order_items (
   id               uuid primary key default gen_random_uuid(),

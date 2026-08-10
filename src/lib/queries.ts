@@ -15,6 +15,7 @@ import type {
   Order,
   OrderItem,
   PublicSettings,
+  SelectedOption,
 } from './types';
 
 // ─────────────────────────── Settings ──────────────────────────────
@@ -231,4 +232,78 @@ export async function getDayStats(): Promise<DayStats> {
     .slice(0, 5);
 
   return { total, delivered, cancelled, topItems };
+}
+
+export interface ItemStat {
+  name: string;
+  count: number;
+  orders: number;
+}
+
+export interface VariantStat {
+  itemName: string;
+  variantLabel: string | null;
+  count: number;
+}
+
+export interface OverallStats {
+  totalOrders: number;
+  totalItemsSold: number;
+  byItem: ItemStat[];
+  byVariant: VariantStat[];
+}
+
+/** Rótulo estável da combinação de opções escolhidas (ex.: "Caramelo · Água"). */
+function variantLabel(options: SelectedOption[]): string | null {
+  if (!options.length) return null;
+  return [...options]
+    .sort((a, b) => a.group.localeCompare(b.group) || a.option.localeCompare(b.option))
+    .map((o) => o.option)
+    .join(' · ');
+}
+
+/**
+ * Estatísticas de todos os tempos (exclui cancelados): ranking por bebida
+ * e ranking por variante (bebida + opções), para analisar produtos
+ * individualmente (ex.: "Ultracoffee — Caramelo · Água").
+ */
+export async function getOverallItemStats(): Promise<OverallStats> {
+  const sb = getAdminClient();
+  const { data: orders } = await sb.from('orders').select('id, status').neq('status', 'cancelado');
+  const validIds = ((orders ?? []) as { id: string; status: string }[]).map((o) => o.id);
+
+  const byItemCount = new Map<string, number>();
+  const byItemOrders = new Map<string, Set<string>>();
+  const byVariantCount = new Map<string, { itemName: string; variantLabel: string | null; count: number }>();
+  let totalItemsSold = 0;
+
+  if (validIds.length > 0) {
+    const { data: items } = await sb
+      .from('order_items')
+      .select('order_id, item_name, quantity, selected_options')
+      .in('order_id', validIds);
+
+    for (const it of (items ?? []) as OrderItem[]) {
+      totalItemsSold += it.quantity;
+
+      byItemCount.set(it.item_name, (byItemCount.get(it.item_name) ?? 0) + it.quantity);
+      const orderSet = byItemOrders.get(it.item_name) ?? new Set<string>();
+      orderSet.add(it.order_id);
+      byItemOrders.set(it.item_name, orderSet);
+
+      const label = variantLabel(it.selected_options);
+      const key = `${it.item_name}::${label ?? ''}`;
+      const existing = byVariantCount.get(key);
+      if (existing) existing.count += it.quantity;
+      else byVariantCount.set(key, { itemName: it.item_name, variantLabel: label, count: it.quantity });
+    }
+  }
+
+  const byItem = [...byItemCount.entries()]
+    .map(([name, count]) => ({ name, count, orders: byItemOrders.get(name)?.size ?? 0 }))
+    .sort((a, b) => b.count - a.count);
+
+  const byVariant = [...byVariantCount.values()].sort((a, b) => b.count - a.count);
+
+  return { totalOrders: validIds.length, totalItemsSold, byItem, byVariant };
 }

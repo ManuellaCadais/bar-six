@@ -11,6 +11,7 @@ import {
   advanceOrderStatus,
   revertOrderStatus,
   cancelOrder,
+  markOrderSeen,
   setBarOpen,
   liberateDivirtaToday,
   clearDivirtaLiberation,
@@ -108,14 +109,9 @@ export function BarPanel({
         async (payload) => {
           const order = await fetchOrder((payload.new as { id: string }).id);
           if (order) {
+            // O som em si fica a cargo do loop de alarme (efeito abaixo), que
+            // reage a `hasUnseen` — aqui só o feedback visual imediato.
             upsert(order);
-            if (soundOnRef.current && audioRef.current) {
-              try {
-                playChime(audioRef.current);
-              } catch {
-                /* ignore */
-              }
-            }
             setFlash(true);
             window.setTimeout(() => setFlash(false), 900);
           }
@@ -142,6 +138,40 @@ export function BarPanel({
       sb.removeChannel(channel);
     };
   }, [fetchOrder, upsert]);
+
+  const hasUnseen = useMemo(
+    () => orders.some((o) => ACTIVE.includes(o.status) && !o.seen_at),
+    [orders],
+  );
+
+  /**
+   * Alarme em loop: enquanto houver pedido ativo não confirmado, toca a
+   * cada poucos segundos. Só para quando o bar confirma o pedido (ou ele
+   * é finalizado) — não existe alternância de "silenciar" o app.
+   */
+  useEffect(() => {
+    if (!hasUnseen || !soundOn || !audioRef.current) return;
+    const ctx = audioRef.current;
+    const ring = () => {
+      try {
+        playChime(ctx);
+      } catch {
+        /* ignore */
+      }
+    };
+    ring();
+    const id = window.setInterval(ring, 4000);
+    return () => window.clearInterval(id);
+  }, [hasUnseen, soundOn]);
+
+  function onMarkSeen(id: string) {
+    setOrders((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, seen_at: new Date().toISOString() } : o)),
+    );
+    startTransition(async () => {
+      await markOrderSeen(id);
+    });
+  }
 
   function enableSound() {
     try {
@@ -176,7 +206,11 @@ export function BarPanel({
       const r = await advanceOrderStatus(id);
       if (r.ok && r.status)
         setOrders((prev) =>
-          prev.map((o) => (o.id === id ? { ...o, status: r.status! } : o)),
+          prev.map((o) =>
+            o.id === id
+              ? { ...o, status: r.status!, seen_at: o.seen_at ?? new Date().toISOString() }
+              : o,
+          ),
         );
     });
   }
@@ -310,12 +344,14 @@ export function BarPanel({
 
             <button
               onClick={enableSound}
+              disabled={soundOn}
               className={cn(
-                'chip border px-3 py-2 text-xs uppercase tracking-widest',
-                soundOn ? 'border-cream/50 text-cream' : 'border-mango/60 text-mango',
+                'chip border px-3 py-2 text-xs uppercase tracking-widest disabled:opacity-100',
+                soundOn ? 'border-cream/50 text-cream' : 'border-mango/60 text-mango animate-pulse-ready',
               )}
+              title={soundOn ? 'O alarme toca até cada pedido ser confirmado' : undefined}
             >
-              {soundOn ? '♪ Som ativo' : '⚠ Ativar som'}
+              {soundOn ? '♪ Som ativo' : 'Ativar som'}
             </button>
 
             <button
@@ -386,9 +422,11 @@ export function BarPanel({
                 now={now}
                 alertMinutes={alertMinutes}
                 pending={pendingIds.has(o.id)}
+                unseen={!o.seen_at}
                 onAdvance={onAdvance}
                 onRevert={onRevert}
                 onCancel={onCancel}
+                onMarkSeen={onMarkSeen}
               />
             ))}
           </div>

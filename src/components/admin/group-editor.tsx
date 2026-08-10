@@ -20,44 +20,46 @@ function OptionRowEditor({ option }: { option: OptionRow }) {
   const [delta, setDelta] = useState(String(option.price_delta || 0));
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
       <input
         className="field-input flex-1 py-2"
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
-      <input
-        className="field-input w-24 py-2"
-        type="number"
-        step="0.5"
-        value={delta}
-        onChange={(e) => setDelta(e.target.value)}
-        title="Acréscimo (R$)"
-      />
-      <button
-        className="btn-ghost px-3 py-2 text-xs"
-        disabled={pending}
-        onClick={() =>
-          run(() =>
-            updateOption(option.id, {
-              group_id: option.group_id,
-              name,
-              price_delta: Number(delta) || 0,
-              sort_order: option.sort_order,
-            }),
-          )
-        }
-      >
-        Salvar
-      </button>
-      <button
-        className="btn-danger px-3 py-2 text-xs"
-        disabled={pending}
-        onClick={() => run(() => deleteOption(option.id))}
-        aria-label="Remover opção"
-      >
-        ✕
-      </button>
+      <div className="flex gap-2">
+        <input
+          className="field-input w-24 py-2"
+          type="number"
+          step="0.5"
+          value={delta}
+          onChange={(e) => setDelta(e.target.value)}
+          title="Acréscimo (R$)"
+        />
+        <button
+          className="btn-ghost px-3 py-2 text-xs"
+          disabled={pending}
+          onClick={() =>
+            run(() =>
+              updateOption(option.id, {
+                group_id: option.group_id,
+                name,
+                price_delta: Number(delta) || 0,
+                sort_order: option.sort_order,
+              }),
+            )
+          }
+        >
+          Salvar
+        </button>
+        <button
+          className="btn-danger px-3 py-2 text-xs"
+          disabled={pending}
+          onClick={() => run(() => deleteOption(option.id))}
+          aria-label="Remover opção"
+        >
+          ✕
+        </button>
+      </div>
     </div>
   );
 }
@@ -68,41 +70,43 @@ function NewOption({ groupId }: { groupId: string }) {
   const [delta, setDelta] = useState('');
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
       <input
         className="field-input flex-1 py-2"
         placeholder="Nova opção (ex.: Avelã)"
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
-      <input
-        className="field-input w-24 py-2"
-        type="number"
-        step="0.5"
-        placeholder="+R$"
-        value={delta}
-        onChange={(e) => setDelta(e.target.value)}
-      />
-      <button
-        className="btn-primary px-3 py-2 text-xs"
-        disabled={pending || !name.trim()}
-        onClick={() =>
-          run(
-            () =>
-              createOption({
-                group_id: groupId,
-                name,
-                price_delta: Number(delta) || 0,
-              }),
-            () => {
-              setName('');
-              setDelta('');
-            },
-          )
-        }
-      >
-        Adicionar
-      </button>
+      <div className="flex gap-2">
+        <input
+          className="field-input w-24 py-2"
+          type="number"
+          step="0.5"
+          placeholder="+R$"
+          value={delta}
+          onChange={(e) => setDelta(e.target.value)}
+        />
+        <button
+          className="btn-primary px-3 py-2 text-xs whitespace-nowrap"
+          disabled={pending || !name.trim()}
+          onClick={() =>
+            run(
+              () =>
+                createOption({
+                  group_id: groupId,
+                  name,
+                  price_delta: Number(delta) || 0,
+                }),
+              () => {
+                setName('');
+                setDelta('');
+              },
+            )
+          }
+        >
+          Adicionar
+        </button>
+      </div>
     </div>
   );
 }
@@ -135,7 +139,7 @@ export function GroupEditor({ group }: { group: OptionGroup }) {
 
       {open && (
         <div className="mt-3 space-y-3 border-t border-hairline pt-3">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="grid gap-2 sm:grid-cols-4">
             <input
               className="field-input py-2 sm:col-span-2"
               value={name}
@@ -210,7 +214,7 @@ export function NewGroup({ itemId }: { itemId: string }) {
   return (
     <div className="rounded-xl border border-dashed border-hairline-strong p-3">
       <p className="field-label">Novo grupo de personalização</p>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid gap-2 sm:grid-cols-4">
         <input
           className="field-input py-2 sm:col-span-2"
           placeholder="Ex.: Xarope Monin"

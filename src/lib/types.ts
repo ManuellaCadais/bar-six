@@ -93,6 +93,8 @@ export interface Order {
   status: OrderStatus;
   cancel_reason: string | null;
   total: number | null;
+  /** Quando o bar confirmou que viu o pedido — enquanto for null, o alarme continua tocando. */
+  seen_at: string | null;
   created_at: string;
   updated_at: string;
   order_items?: OrderItem[];

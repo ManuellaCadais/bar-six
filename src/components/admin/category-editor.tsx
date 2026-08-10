@@ -169,19 +169,19 @@ export function CategoryEditor({
 
   return (
     <section className="surface-card p-4 sm:p-5">
-      <header className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <span className="plate-bullet" style={{ color: category.color }} />
-          <h2 className="font-heading text-xl uppercase tracking-wide text-text-hi">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="plate-bullet flex-none" style={{ color: category.color }} />
+          <h2 className="truncate font-heading text-xl uppercase tracking-wide text-text-hi">
             {category.name}
           </h2>
-          <span className="text-xs text-text-low">({category.items.length})</span>
+          <span className="flex-none text-xs text-text-low">({category.items.length})</span>
           {category.is_signature && (
-            <span className="chip border-cream/40 text-cream text-[0.6rem]">assinatura</span>
+            <span className="flex-none chip border-cream/40 text-cream text-[0.6rem]">assinatura</span>
           )}
         </div>
         <button
-          className="btn-ghost px-4 py-2 text-xs"
+          className="btn-ghost flex-none px-4 py-2 text-xs"
           onClick={() => setEditing((e) => !e)}
         >
           {editing ? 'Fechar' : 'Editar'}

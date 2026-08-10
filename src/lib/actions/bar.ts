@@ -17,7 +17,7 @@ export async function advanceOrderStatus(
   const sb = getAdminClient();
   const { data: cur } = await sb
     .from('orders')
-    .select('status')
+    .select('status, seen_at')
     .eq('id', orderId)
     .maybeSingle();
   if (!cur) return { ok: false, message: 'Pedido não encontrado.' };
@@ -25,9 +25,26 @@ export async function advanceOrderStatus(
   const nxt = nextStatus(cur.status as OrderStatus);
   if (!nxt) return { ok: false, message: 'Pedido já finalizado.' };
 
-  const { error } = await sb.from('orders').update({ status: nxt }).eq('id', orderId);
+  // Avançar o status é, por si só, uma confirmação de que o bar viu o pedido
+  // — evita o alarme continuar tocando se o toque foi direto no botão de status.
+  const { error } = await sb
+    .from('orders')
+    .update({ status: nxt, seen_at: cur.seen_at ?? new Date().toISOString() })
+    .eq('id', orderId);
   if (error) return { ok: false, message: 'Falha ao atualizar o status.' };
   return { ok: true, status: nxt };
+}
+
+/** Confirma que o bar viu o pedido — silencia o alarme sonoro para ele. */
+export async function markOrderSeen(orderId: string): Promise<Result> {
+  await requireRole('bar');
+  const sb = getAdminClient();
+  const { error } = await sb
+    .from('orders')
+    .update({ seen_at: new Date().toISOString() })
+    .eq('id', orderId)
+    .is('seen_at', null);
+  return error ? { ok: false, message: 'Falha ao confirmar.' } : { ok: true };
 }
 
 /** Volta o pedido um passo (correção de toque acidental). */

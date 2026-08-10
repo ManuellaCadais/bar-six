@@ -2,13 +2,58 @@
 
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import { Wordmark } from '@/components/brand';
+import { Seal, Wordmark } from '@/components/brand';
 
 const QR_OPTS = {
   errorCorrectionLevel: 'M' as const,
   margin: 2,
   color: { dark: '#0B0B0A', light: '#E9DCC3' },
 };
+
+/**
+ * Moldura em formato de anilha (disco de peso) atrás do QR — o mesmo
+ * apoio circular onde os copos SIX ficam nas fotos de referência.
+ * Desenhada em SVG (preenchimento vetorial) para imprimir corretamente
+ * mesmo sem a opção "Imagens de fundo" ativada no diálogo de impressão.
+ */
+function PlateFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative grid place-items-center">
+      <svg
+        viewBox="0 0 300 300"
+        className="pointer-events-none absolute h-[15.5rem] w-[15.5rem] sm:h-64 sm:w-64"
+        aria-hidden
+      >
+        <circle cx="150" cy="150" r="146" fill="#D8C9A8" />
+        <circle cx="150" cy="150" r="146" fill="none" stroke="#8A5A2B" strokeOpacity="0.35" strokeWidth="2" />
+        <circle cx="150" cy="150" r="122" fill="none" stroke="#8A5A2B" strokeOpacity="0.28" strokeWidth="1.5" />
+        {[0, 90, 180, 270].map((deg) => (
+          <circle
+            key={deg}
+            cx={150 + 122 * Math.cos((deg * Math.PI) / 180)}
+            cy={150 + 122 * Math.sin((deg * Math.PI) / 180)}
+            r="6"
+            fill="#8A5A2B"
+            fillOpacity="0.3"
+          />
+        ))}
+        <text
+          x="150"
+          y="252"
+          textAnchor="middle"
+          fontSize="11"
+          letterSpacing="3"
+          fill="#8A5A2B"
+          fillOpacity="0.55"
+          style={{ fontFamily: 'var(--font-oswald), sans-serif', textTransform: 'uppercase' }}
+        >
+          Wowness Club
+        </text>
+      </svg>
+      <div className="relative rounded-2xl bg-cream p-4 shadow-plate sm:p-5">{children}</div>
+    </div>
+  );
+}
 
 export function QrGenerator({ defaultUrl }: { defaultUrl: string }) {
   const [url, setUrl] = useState(defaultUrl);
@@ -96,27 +141,39 @@ export function QrGenerator({ defaultUrl }: { defaultUrl: string }) {
       </div>
 
       {/* Folha imprimível */}
-      <div className="print-sheet mx-auto flex aspect-[148/210] w-full max-w-md flex-col items-center justify-between rounded-2xl bg-cream px-8 py-10 text-ink shadow-soft">
+      <div className="print-sheet mx-auto flex aspect-[148/210] w-full max-w-md flex-col items-center justify-between rounded-2xl bg-cream px-8 py-9 text-ink shadow-soft">
         <div className="text-center text-ink">
-          <Wordmark className="text-[2rem]" />
-          <p className="mt-3 text-[0.6rem] uppercase tracking-[0.34em] text-ink/60">
-            Wowness Club
-          </p>
-        </div>
-
-        <div className="flex flex-col items-center">
-          <div
-            className="w-56 max-w-[70%] [&>svg]:h-full [&>svg]:w-full"
-            aria-label="QR Code do cardápio"
-            dangerouslySetInnerHTML={{ __html: svg }}
-          />
-          <p className="mt-5 max-w-[16rem] text-center font-heading text-sm uppercase tracking-[0.2em] text-ink/80">
-            Aponte a câmera e faça seu pedido
-          </p>
+          <Seal className="mx-auto h-10 w-10 text-ink/70" />
+          <div className="mt-2">
+            <Wordmark className="text-[1.5rem]" subClassName="text-ink/60" />
+          </div>
         </div>
 
         <div className="text-center">
-          <div className="mx-auto mb-3 flex items-center gap-2 text-ink/40" aria-hidden>
+          <h1 className="six-wordmark text-[2.6rem] leading-[0.85] text-ink sm:text-[3rem]">
+            Peça
+            <br />
+            no bar
+          </h1>
+          <span className="mx-auto mt-2 block h-1 w-14 rounded-full bg-hibiscus" aria-hidden />
+          <p className="mx-auto mt-3 max-w-[15rem] text-sm text-ink/65">
+            Escaneie o QR e monte seu pedido sem sair do treino.
+          </p>
+        </div>
+
+        <PlateFrame>
+          <div
+            className="w-40 sm:w-44 [&>svg]:block [&>svg]:h-full [&>svg]:w-full"
+            aria-label="QR Code do cardápio"
+            dangerouslySetInnerHTML={{ __html: svg }}
+          />
+        </PlateFrame>
+
+        <div className="text-center">
+          <p className="font-heading text-xs uppercase tracking-[0.24em] text-ink/70">
+            Aponte a câmera do celular
+          </p>
+          <div className="mx-auto my-3 flex items-center gap-2 text-ink/40" aria-hidden>
             <span className="h-px w-8 bg-current" />
             <span className="text-xs">✦</span>
             <span className="h-px w-8 bg-current" />
@@ -124,6 +181,11 @@ export function QrGenerator({ defaultUrl }: { defaultUrl: string }) {
           <p className="text-xs text-ink/60">@sixhealth.br · @sixwownessbar</p>
         </div>
       </div>
+
+      <p className="no-print mx-auto mt-4 max-w-md text-center text-xs text-text-low">
+        Dica: no diálogo de impressão, ative a opção <strong>"Imagens de fundo"</strong>{' '}
+        (ou "Background graphics") para a folha sair com as cores certas.
+      </p>
     </div>
   );
 }

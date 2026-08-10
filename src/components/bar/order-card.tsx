@@ -18,17 +18,21 @@ export function OrderCard({
   now,
   alertMinutes,
   pending,
+  unseen,
   onAdvance,
   onRevert,
   onCancel,
+  onMarkSeen,
 }: {
   order: Order;
   now: Date;
   alertMinutes: number;
   pending: boolean;
+  unseen: boolean;
   onAdvance: (id: string) => void;
   onRevert: (id: string) => void;
   onCancel: (id: string, reason: string) => void;
+  onMarkSeen: (id: string) => void;
 }) {
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState('');
@@ -41,10 +45,22 @@ export function OrderCard({
     <article
       className={cn(
         'rounded-2xl border bg-surface/90 shadow-card overflow-hidden',
-        overdue ? 'border-hibiscus/60' : 'border-hairline',
+        unseen ? 'border-mango' : overdue ? 'border-hibiscus/60' : 'border-hairline',
       )}
     >
-      {overdue && <div className="h-1 w-full bg-hibiscus" />}
+      {unseen ? (
+        <button
+          onClick={() => onMarkSeen(order.id)}
+          className="flex w-full items-center justify-center gap-2.5 bg-mango px-4 py-3 text-ink transition active:scale-[0.99]"
+        >
+          <span className="plate-bullet animate-pulse-ready" />
+          <span className="font-heading text-sm uppercase tracking-[0.18em]">
+            Novo pedido — toque para confirmar
+          </span>
+        </button>
+      ) : (
+        overdue && <div className="h-1 w-full bg-hibiscus" />
+      )}
 
       <div className="p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
