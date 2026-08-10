@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { loadPosterAssets, buildPosterSvg, rasterizePoster, type PosterAssets } from '@/lib/poster';
 
-const TAGLINE = 'Escaneou, escolheu, enviou. Seu pedido chega ao bar na hora — e você acompanha tudo pelo celular.';
-
 const QR_OPTS = {
   errorCorrectionLevel: 'M' as const,
   margin: 2,
@@ -205,8 +203,14 @@ export function QrGenerator({ defaultUrl }: { defaultUrl: string }) {
 
         <div className="text-center">
           <span className="mx-auto mb-3 block h-1 w-12 rounded-full bg-hibiscus" aria-hidden />
-          <p className="mx-auto max-w-[16rem] text-[0.95rem] leading-relaxed text-ink/75">
-            {TAGLINE}
+          <p className="font-heading text-base font-semibold uppercase tracking-wide text-ink">
+            Escaneou, escolheu, enviou.
+          </p>
+          <p className="font-heading mx-auto mt-2 max-w-[15rem] text-[0.8rem] tracking-wide text-ink/60">
+            Faça seu pedido de onde estiver, o bar receberá na hora.
+          </p>
+          <p className="font-heading mx-auto mt-1.5 max-w-[15rem] text-[0.85rem] font-semibold tracking-wide text-ink/90">
+            Acompanhe todo o status pelo celular.
           </p>
         </div>
 

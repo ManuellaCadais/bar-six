@@ -82,47 +82,44 @@ async function embedImage(url: string): Promise<string> {
 }
 
 export interface PosterAssets {
-  display: string; // Anton (SIX, "Peça no bar")
-  heading: string; // Oswald (rótulos, tracking largo)
+  heading: string; // Oswald — única fonte usada no cartaz (logo já traz o wordmark)
   fontFaceCss: string;
   logoDataUrl: string;
 }
 
-/** Carrega e embute as fontes da marca + a logo, prontas pro SVG do cartaz. */
+/** Carrega e embute a fonte da marca + a logo, prontas pro SVG do cartaz. */
 export async function loadPosterAssets(): Promise<PosterAssets> {
   await document.fonts.ready;
-  const display = resolveFontFamily('--font-anton') ?? 'Impact';
   const heading = resolveFontFamily('--font-oswald') ?? 'sans-serif';
-  const [displayCss, headingCss, logoDataUrl] = await Promise.all([
-    embedFontFace(display),
+  const [headingCss, logoDataUrl] = await Promise.all([
     embedFontFace(heading),
     embedImage('/six-logo.png'),
   ]);
-  return { display, heading, fontFaceCss: `${displayCss}\n${headingCss}`, logoDataUrl };
+  return { heading, fontFaceCss: headingCss, logoDataUrl };
 }
 
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-/** Linhas da frase de efeito — quebradas à mão nos pontos de pontuação natural. */
-const TAGLINE_LINES = [
-  'Escaneou, escolheu, enviou.',
-  'Seu pedido chega ao bar na hora —',
-  'e você acompanha tudo pelo celular.',
-];
-
 /** Monta o SVG completo do cartaz (mesma composição da tela: logo, frase, QR na anilha, rodapé). */
 export function buildPosterSvg(qrPngDataUrl: string, assets: PosterAssets): string {
   const W = 592;
   const H = 840;
   const cx = W / 2;
-  const { display, heading, fontFaceCss, logoDataUrl } = assets;
+  const { heading, fontFaceCss, logoDataUrl } = assets;
 
-  const taglineSvg = TAGLINE_LINES.map(
-    (line, i) =>
-      `<text x="${cx}" y="${224 + i * 27}" text-anchor="middle" font-family="${esc(heading)}" font-size="19" fill="#0B0B0A" fill-opacity="0.72">${esc(line)}</text>`,
-  ).join('\n  ');
+  const hf = esc(heading);
+  const text = (y: number, size: number, weight: number, opacity: number, line: string) =>
+    `<text x="${cx}" y="${y}" text-anchor="middle" font-family="${hf}" font-size="${size}" font-weight="${weight}" letter-spacing="0.3" fill="#0B0B0A" fill-opacity="${opacity}">${esc(line)}</text>`;
+
+  const taglineSvg = [
+    text(216, 23, 700, 0.95, 'ESCANEOU, ESCOLHEU, ENVIOU.'),
+    text(246, 15, 400, 0.6, 'Faça seu pedido de onde estiver,'),
+    text(267, 15, 400, 0.6, 'o bar receberá na hora.'),
+    text(297, 16.5, 600, 0.9, 'Acompanhe todo o status'),
+    text(318, 16.5, 600, 0.9, 'pelo celular.'),
+  ].join('\n  ');
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <defs>
