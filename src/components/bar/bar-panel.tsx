@@ -66,6 +66,11 @@ export function BarPanel({
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [flash, setFlash] = useState(false);
+  const [actionErrorState, setActionErrorState] = useState<string | null>(null);
+  function setActionError(message: string) {
+    setActionErrorState(message);
+    window.setTimeout(() => setActionErrorState((m) => (m === message ? null : m)), 5000);
+  }
   const [, startTransition] = useTransition();
 
   const audioRef = useRef<AudioContext | null>(null);
@@ -169,7 +174,12 @@ export function BarPanel({
       prev.map((o) => (o.id === id ? { ...o, seen_at: new Date().toISOString() } : o)),
     );
     startTransition(async () => {
-      await markOrderSeen(id);
+      try {
+        const r = await markOrderSeen(id);
+        if (!r.ok) setActionError(r.message ?? 'Não foi possível confirmar o pedido.');
+      } catch {
+        setActionError('Falha ao falar com o servidor. Verifique a conexão e tente de novo.');
+      }
     });
   }
 
@@ -192,7 +202,11 @@ export function BarPanel({
   function withPending(id: string, fn: () => Promise<void>) {
     setPendingIds((p) => new Set(p).add(id));
     startTransition(async () => {
-      await fn();
+      try {
+        await fn();
+      } catch {
+        setActionError('Falha ao falar com o servidor. Verifique a conexão e tente de novo.');
+      }
       setPendingIds((p) => {
         const n = new Set(p);
         n.delete(id);
@@ -204,7 +218,7 @@ export function BarPanel({
   function onAdvance(id: string) {
     withPending(id, async () => {
       const r = await advanceOrderStatus(id);
-      if (r.ok && r.status)
+      if (r.ok && r.status) {
         setOrders((prev) =>
           prev.map((o) =>
             o.id === id
@@ -212,20 +226,27 @@ export function BarPanel({
               : o,
           ),
         );
+      } else {
+        setActionError(r.message ?? 'Não foi possível avançar o pedido.');
+      }
     });
   }
   function onRevert(id: string) {
     withPending(id, async () => {
       const r = await revertOrderStatus(id);
-      if (r.ok && r.status)
+      if (r.ok && r.status) {
         setOrders((prev) =>
           prev.map((o) => (o.id === id ? { ...o, status: r.status! } : o)),
         );
+      } else {
+        setActionError(r.message ?? 'Não foi possível voltar o pedido.');
+      }
     });
   }
   function onCancel(id: string, reason: string) {
     withPending(id, async () => {
       const r = await cancelOrder(id, reason);
+      if (!r.ok) setActionError(r.message ?? 'Não foi possível cancelar o pedido.');
       if (r.ok)
         setOrders((prev) =>
           prev.map((o) =>
@@ -397,6 +418,11 @@ export function BarPanel({
 
       {/* Fila */}
       <main className="mx-auto max-w-7xl px-4 py-6">
+        {actionErrorState && (
+          <p className="mb-4 rounded-lg border border-hibiscus/50 bg-hibiscus/15 px-4 py-2 text-sm text-strawberry">
+            {actionErrorState}
+          </p>
+        )}
         {!soundOn && (
           <p className="mb-4 rounded-lg border border-mango/40 bg-mango/10 px-4 py-2 text-sm text-mango">
             Toque em <strong>Ativar som</strong> para ouvir o alerta de novos pedidos.
