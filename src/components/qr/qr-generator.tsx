@@ -18,12 +18,11 @@ const QR_OPTS = {
  */
 function PlateFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative grid place-items-center">
-      <svg
-        viewBox="0 0 300 300"
-        className="pointer-events-none absolute h-[15.5rem] w-[15.5rem] sm:h-64 sm:w-64"
-        aria-hidden
-      >
+    // Grid de célula única: o círculo e o cartão do QR ocupam a MESMA área,
+    // e o wrapper tem o tamanho explícito do círculo — assim o espaço que
+    // ele ocupa no layout é contado certinho (nada de `absolute` "vazando").
+    <div className="grid h-[15.5rem] w-[15.5rem] place-items-center sm:h-64 sm:w-64">
+      <svg viewBox="0 0 300 300" className="pointer-events-none col-start-1 row-start-1 h-full w-full" aria-hidden>
         <circle cx="150" cy="150" r="146" fill="#D8C9A8" />
         <circle cx="150" cy="150" r="146" fill="none" stroke="#8A5A2B" strokeOpacity="0.35" strokeWidth="2" />
         <circle cx="150" cy="150" r="122" fill="none" stroke="#8A5A2B" strokeOpacity="0.28" strokeWidth="1.5" />
@@ -50,7 +49,9 @@ function PlateFrame({ children }: { children: React.ReactNode }) {
           Wowness Club
         </text>
       </svg>
-      <div className="relative rounded-2xl bg-cream p-4 shadow-plate sm:p-5">{children}</div>
+      <div className="relative col-start-1 row-start-1 rounded-2xl bg-cream p-4 shadow-plate sm:p-5">
+        {children}
+      </div>
     </div>
   );
 }
@@ -150,12 +151,10 @@ export function QrGenerator({ defaultUrl }: { defaultUrl: string }) {
         </div>
 
         <div className="text-center">
-          <h1 className="six-wordmark text-[2.6rem] leading-[0.85] text-ink sm:text-[3rem]">
-            Peça
-            <br />
-            no bar
+          <h1 className="six-wordmark whitespace-nowrap text-[1.9rem] leading-tight text-ink sm:text-[2.3rem]">
+            Peça no bar
           </h1>
-          <span className="mx-auto mt-2 block h-1 w-14 rounded-full bg-hibiscus" aria-hidden />
+          <span className="mx-auto mt-2.5 block h-1 w-14 rounded-full bg-hibiscus" aria-hidden />
           <p className="mx-auto mt-3 max-w-[15rem] text-sm text-ink/65">
             Escaneie o QR e monte seu pedido sem sair do treino.
           </p>
