@@ -43,7 +43,7 @@ export function OrderTracker({ initial }: { initial: Order }) {
         'postgres_changes',
         {
           event: 'UPDATE',
-          schema: 'public',
+          schema: 'bar',
           table: 'orders',
           filter: `id=eq.${initial.id}`,
         },

@@ -6,7 +6,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
  * SÓ pode ser usado no servidor (Server Actions, Route Handlers, RSC).
  * O import 'server-only' garante erro de build se vazar para o cliente.
  */
-export function getAdminClient(): SupabaseClient {
+export function getAdminClient(): SupabaseClient<any, 'bar', any> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -17,6 +17,9 @@ export function getAdminClient(): SupabaseClient {
   }
 
   return createClient(url, serviceKey, {
+    // Mesmo projeto Supabase do six_control (schema `public`) — o bar vive
+    // isolado no schema `bar`. Este client nunca deve tocar em `public`.
+    db: { schema: 'bar' },
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }

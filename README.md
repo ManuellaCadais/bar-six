@@ -49,17 +49,23 @@ O cardápio já vem populado (seed) com os itens reais transcritos do cardápio 
 
 ## 1. Setup do Supabase
 
-1. Crie uma conta em [supabase.com](https://supabase.com) e um **novo projeto** (o plano gratuito basta).
-2. No painel do projeto, vá em **SQL Editor** e rode, **nesta ordem**:
-   - `supabase/schema.sql` — cria tabelas, índices, RLS e habilita o realtime.
-   - `supabase/seed.sql` — popula o cardápio inicial e os ajustes padrão.
+Este projeto foi desenhado para **reaproveitar um projeto Supabase que você já tem** (ex.: o mesmo do `six_control`), sem tocar em nada que já existe. Tudo do bar vive isolado num **schema Postgres próprio chamado `bar`** — tabelas, funções, políticas e a publicação de realtime são todas qualificadas com `bar.` (`bar.orders`, `bar.categories`…). O schema `public` (onde mora o outro sistema) nunca é lido, alterado ou referenciado por nenhum arquivo aqui.
+
+> Se preferir mesmo assim um projeto 100% separado, o passo a passo é idêntico — só pule a Etapa 4 abaixo.
+
+1. No painel do projeto Supabase, vá em **SQL Editor** e rode, **nesta ordem**:
+   - `supabase/schema.sql` — cria o schema `bar`, suas tabelas, índices, RLS, a função de gravação atômica do pedido e habilita o realtime **só** em `bar.orders`/`bar.order_items`.
+   - `supabase/seed.sql` — popula o cardápio inicial e os ajustes padrão (tudo dentro de `bar.*`).
    
    Basta abrir cada arquivo, colar o conteúdo no SQL Editor e clicar em **Run**. Ambos são seguros para reexecutar.
-3. Confirme o realtime: **Database → Replication** (ou **Publications**) deve listar `orders` e `order_items` na publicação `supabase_realtime` (o `schema.sql` já faz isso).
-4. Pegue as chaves em **Project Settings → API**:
+2. Confirme o realtime: **Database → Replication** (ou **Publications**) deve listar `bar.orders` e `bar.order_items` na publicação `supabase_realtime`.
+3. Pegue as chaves em **Project Settings → API**:
    - **Project URL** → `NEXT_PUBLIC_SUPABASE_URL`
    - **anon public** → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - **service_role** (secreta!) → `SUPABASE_SERVICE_ROLE_KEY`
+4. **Passo manual obrigatório quando reaproveitando um projeto existente:** em **Project Settings → Data API → "Exposed schemas"**, adicione `bar` à lista (fica algo como `public, graphql_public, bar`) e salve. Sem isso, a API não serve as tabelas do schema `bar` e o app recebe erro de "schema não encontrado".
+
+> ⚠️ O `schema.sql` só cria/altera objetos dentro de `bar.*` — não executa nenhum `create`, `alter` ou `drop` em `public`. É seguro rodar no mesmo projeto que já está em produção.
 
 ## 2. Variáveis de ambiente
 
@@ -148,7 +154,9 @@ Para repovoar do zero, rode novamente `supabase/seed.sql` (ele não duplica iten
 
 ## Como funciona o realtime e a segurança
 
-- O navegador usa a **chave anônima** só para **ler** cardápio e pedidos e para as **subscriptions de realtime** (fila do bar e tela do aluno).
+- **Isolamento por schema:** todas as tabelas, funções e policies do bar vivem em `bar.*`, nunca em `public`. O client do navegador e o do servidor apontam explicitamente para `db: { schema: 'bar' }` (`src/lib/supabase/browser.ts` e `admin.ts`) — não há caminho no código que leia ou escreva em `public`.
+- **Privilégio mínimo do anon:** a chave anônima só tem `GRANT SELECT` em `bar.orders` e `bar.order_items` (concedido no `schema.sql`). Ela não recebe nenhum privilégio em `bar.categories`, `bar.settings` etc. — o cardápio e os ajustes são sempre lidos no servidor com a `service_role`. Isso reduz a exposição a exatamente o necessário para a fila em tempo real funcionar.
+- O navegador usa a **chave anônima** só para **ler** pedidos e para as **subscriptions de realtime** (fila do bar e tela do aluno).
 - **Toda escrita** (registrar pedido, mudar status, disponibilidade, CRUD, PINs) passa por **Server Actions** no servidor, usando a **service_role**. O servidor **reconstrói o pedido a partir dos IDs** e revalida as regras (bar aberto, categoria liberada no dia, item disponível) — nunca confia em preço/nome vindos do cliente.
 - **RLS** liga: leitura pública de cardápio/pedidos, leitura de `settings` só nas linhas públicas (o hash do PIN fica oculto), e **nenhuma** permissão de escrita para o anônimo.
 - O pedido e seus itens são gravados **numa única transação** (função `create_order` no Postgres, executável só pela `service_role`). Assim o evento de realtime só chega ao balcão depois do commit — o painel nunca mostra um card sem itens.

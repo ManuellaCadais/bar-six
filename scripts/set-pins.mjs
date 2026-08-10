@@ -38,7 +38,10 @@ if (!barPin && !adminPin) {
 // Precisa bater com hashPin() em src/lib/auth.ts
 const hashPin = (pin) => createHash('sha256').update(`${pin.trim()}::${secret}`).digest('hex');
 
-const sb = createClient(url, serviceKey, { auth: { persistSession: false } });
+const sb = createClient(url, serviceKey, {
+  db: { schema: 'bar' }, // schema isolado do bar — nunca `public` (six_control)
+  auth: { persistSession: false },
+});
 
 const rows = [];
 for (const [area, pin] of [

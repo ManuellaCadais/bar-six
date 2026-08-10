@@ -104,7 +104,7 @@ export function BarPanel({
       .channel('bar-orders')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'orders' },
+        { event: 'INSERT', schema: 'bar', table: 'orders' },
         async (payload) => {
           const order = await fetchOrder((payload.new as { id: string }).id);
           if (order) {
@@ -123,7 +123,7 @@ export function BarPanel({
       )
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'orders' },
+        { event: 'UPDATE', schema: 'bar', table: 'orders' },
         async (payload) => {
           const order = await fetchOrder((payload.new as { id: string }).id);
           if (order) upsert(order, false);
@@ -131,7 +131,7 @@ export function BarPanel({
       )
       .on(
         'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'orders' },
+        { event: 'DELETE', schema: 'bar', table: 'orders' },
         (payload) => {
           const id = (payload.old as { id?: string }).id;
           if (id) setOrders((prev) => prev.filter((o) => o.id !== id));
