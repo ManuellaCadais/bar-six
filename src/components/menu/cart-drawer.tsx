@@ -61,11 +61,15 @@ export function CartDrawer({
         customerName: name.trim(),
         location,
         notes: notes.trim() || undefined,
-        items: lines.map((l) => ({
-          itemId: l.itemId,
-          quantity: l.quantity,
-          optionIds: l.options.map((o) => o.optionId),
-        })),
+        items: lines.map((l) =>
+          l.isCustom
+            ? { custom: l.name, quantity: l.quantity }
+            : {
+                itemId: l.itemId,
+                quantity: l.quantity,
+                optionIds: l.options.map((o) => o.optionId),
+              },
+        ),
       });
       if (res.ok) {
         clear();
@@ -134,15 +138,24 @@ export function CartDrawer({
                 <div key={l.lineId} className="flex gap-3 border-b border-hairline pb-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-heading uppercase tracking-wide text-text-hi">
+                      <h3
+                        className={cn(
+                          'font-heading text-text-hi',
+                          l.isCustom ? 'normal-case' : 'uppercase tracking-wide',
+                        )}
+                      >
                         {l.name}
                       </h3>
                       {l.is_alcoholic && <span className="tag-18">+18</span>}
                     </div>
-                    {l.options.length > 0 && (
-                      <p className="mt-0.5 text-xs text-text-mid">
-                        {l.options.map((o) => o.optionName).join(' · ')}
-                      </p>
+                    {l.isCustom ? (
+                      <p className="mt-0.5 text-xs text-cream-dim">Personalizado</p>
+                    ) : (
+                      l.options.length > 0 && (
+                        <p className="mt-0.5 text-xs text-text-mid">
+                          {l.options.map((o) => o.optionName).join(' · ')}
+                        </p>
+                      )
                     )}
                     <div className="mt-2 flex items-center gap-3">
                       <div className="flex items-center rounded-full border border-hairline-strong">

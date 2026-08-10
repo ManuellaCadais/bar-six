@@ -127,4 +127,6 @@ export interface CartLine {
   quantity: number;
   is_alcoholic: boolean;
   options: CartOptionSelection[];
+  /** Pedido escrito livremente pelo aluno (fora do cardápio fixo) — `name` guarda o texto digitado. */
+  isCustom?: boolean;
 }

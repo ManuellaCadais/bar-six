@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import { Seal, Wordmark } from '@/components/brand';
-import { loadPosterFonts, buildPosterSvg, rasterizePoster, type PosterFonts } from '@/lib/poster';
+import { loadPosterAssets, buildPosterSvg, rasterizePoster, type PosterAssets } from '@/lib/poster';
+
+const TAGLINE = 'Escaneou, escolheu, enviou. Seu pedido chega ao bar na hora — e você acompanha tudo pelo celular.';
 
 const QR_OPTS = {
   errorCorrectionLevel: 'M' as const,
@@ -63,13 +64,13 @@ export function QrGenerator({ defaultUrl }: { defaultUrl: string }) {
   const [png, setPng] = useState('');
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
-  const [fonts, setFonts] = useState<PosterFonts | null>(null);
+  const [assets, setAssets] = useState<PosterAssets | null>(null);
 
-  // Pré-carrega e embute as fontes assim que a página abre — assim o
+  // Pré-carrega e embute fontes + logo assim que a página abre — assim o
   // primeiro clique em "Baixar cartaz" já sai rápido.
   useEffect(() => {
-    loadPosterFonts()
-      .then(setFonts)
+    loadPosterAssets()
+      .then(setAssets)
       .catch(() => {
         /* se falhar, downloadPoster tenta carregar de novo na hora do clique */
       });
@@ -116,9 +117,9 @@ export function QrGenerator({ defaultUrl }: { defaultUrl: string }) {
     setExporting(true);
     setExportError(null);
     try {
-      const activeFonts = fonts ?? (await loadPosterFonts());
-      if (!fonts) setFonts(activeFonts);
-      const markup = buildPosterSvg(png, activeFonts);
+      const activeAssets = assets ?? (await loadPosterAssets());
+      if (!assets) setAssets(activeAssets);
+      const markup = buildPosterSvg(png, activeAssets);
       const dataUrl = await rasterizePoster(markup, 3);
       const a = document.createElement('a');
       a.href = dataUrl;
@@ -195,20 +196,17 @@ export function QrGenerator({ defaultUrl }: { defaultUrl: string }) {
 
       {/* Folha imprimível / exportável */}
       <div className="print-sheet mx-auto flex aspect-[148/210] w-full max-w-md flex-col items-center justify-between rounded-2xl bg-cream px-8 py-9 text-ink shadow-soft">
-        <div className="text-center text-ink">
-          <Seal className="mx-auto h-10 w-10 text-ink/70" />
-          <div className="mt-2">
-            <Wordmark className="text-[1.5rem]" subClassName="text-ink/60" />
-          </div>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/six-logo.png"
+          alt="SIX Wowness Club"
+          className="h-[4.75rem] w-[4.75rem] object-contain drop-shadow-sm sm:h-24 sm:w-24"
+        />
 
         <div className="text-center">
-          <h1 className="six-wordmark whitespace-nowrap text-[1.9rem] leading-tight text-ink sm:text-[2.3rem]">
-            Peça no bar
-          </h1>
-          <span className="mx-auto mt-2.5 block h-1 w-14 rounded-full bg-hibiscus" aria-hidden />
-          <p className="mx-auto mt-3 max-w-[15rem] text-sm text-ink/65">
-            Escaneie o QR e monte seu pedido sem sair do treino.
+          <span className="mx-auto mb-3 block h-1 w-12 rounded-full bg-hibiscus" aria-hidden />
+          <p className="mx-auto max-w-[16rem] text-[0.95rem] leading-relaxed text-ink/75">
+            {TAGLINE}
           </p>
         </div>
 

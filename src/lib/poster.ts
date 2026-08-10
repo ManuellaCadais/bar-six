@@ -74,58 +74,71 @@ async function embedFontFace(family: string): Promise<string> {
   return rules.join('\n');
 }
 
-export interface PosterFonts {
+async function embedImage(url: string): Promise<string> {
+  const res = await fetch(url, { cache: 'force-cache' });
+  const buf = await res.arrayBuffer();
+  const contentType = res.headers.get('content-type') ?? 'image/png';
+  return `data:${contentType};base64,${arrayBufferToBase64(buf)}`;
+}
+
+export interface PosterAssets {
   display: string; // Anton (SIX, "Peça no bar")
   heading: string; // Oswald (rótulos, tracking largo)
   fontFaceCss: string;
+  logoDataUrl: string;
 }
 
-/** Carrega e embute as fontes da marca uma única vez, prontas pro SVG do cartaz. */
-export async function loadPosterFonts(): Promise<PosterFonts> {
+/** Carrega e embute as fontes da marca + a logo, prontas pro SVG do cartaz. */
+export async function loadPosterAssets(): Promise<PosterAssets> {
   await document.fonts.ready;
   const display = resolveFontFamily('--font-anton') ?? 'Impact';
   const heading = resolveFontFamily('--font-oswald') ?? 'sans-serif';
-  const [displayCss, headingCss] = await Promise.all([
+  const [displayCss, headingCss, logoDataUrl] = await Promise.all([
     embedFontFace(display),
     embedFontFace(heading),
+    embedImage('/six-logo.png'),
   ]);
-  return { display, heading, fontFaceCss: `${displayCss}\n${headingCss}` };
+  return { display, heading, fontFaceCss: `${displayCss}\n${headingCss}`, logoDataUrl };
 }
 
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-/** Monta o SVG completo do cartaz (mesma composição da tela: selo, título, QR na anilha, rodapé). */
-export function buildPosterSvg(qrPngDataUrl: string, fonts: PosterFonts): string {
+/** Linhas da frase de efeito — quebradas à mão nos pontos de pontuação natural. */
+const TAGLINE_LINES = [
+  'Escaneou, escolheu, enviou.',
+  'Seu pedido chega ao bar na hora —',
+  'e você acompanha tudo pelo celular.',
+];
+
+/** Monta o SVG completo do cartaz (mesma composição da tela: logo, frase, QR na anilha, rodapé). */
+export function buildPosterSvg(qrPngDataUrl: string, assets: PosterAssets): string {
   const W = 592;
   const H = 840;
   const cx = W / 2;
+  const { display, heading, fontFaceCss, logoDataUrl } = assets;
+
+  const taglineSvg = TAGLINE_LINES.map(
+    (line, i) =>
+      `<text x="${cx}" y="${224 + i * 27}" text-anchor="middle" font-family="${esc(heading)}" font-size="19" fill="#0B0B0A" fill-opacity="0.72">${esc(line)}</text>`,
+  ).join('\n  ');
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <defs>
-    <style>${fonts.fontFaceCss}</style>
+    <style>${fontFaceCss}</style>
     <clipPath id="qr-clip"><rect x="0" y="0" width="200" height="200" rx="14" /></clipPath>
   </defs>
 
   <rect width="${W}" height="${H}" rx="28" fill="#E9DCC3" />
 
-  <!-- Selo -->
-  <g transform="translate(${cx}, 78)">
-    <circle r="34" fill="none" stroke="#0B0B0A" stroke-opacity="0.55" />
-    <circle r="27" fill="none" stroke="#0B0B0A" stroke-opacity="0.35" stroke-width="0.75" />
-    <text text-anchor="middle" dominant-baseline="central" font-family="${esc(fonts.display)}" font-size="17" fill="#0B0B0A" fill-opacity="0.85">SIX</text>
-  </g>
+  <!-- Logo (selo oficial SIX Wowness Club) -->
+  <image href="${logoDataUrl}" x="${cx - 76}" y="18" width="152" height="152" />
 
-  <!-- Wordmark -->
-  <text x="${cx}" y="152" text-anchor="middle" font-family="${esc(fonts.display)}" font-size="40" fill="#0B0B0A">SIX</text>
-  <text x="${cx}" y="172" text-anchor="middle" font-family="${esc(fonts.heading)}" font-weight="500" letter-spacing="7" font-size="11" fill="#0B0B0A" fill-opacity="0.6">SPORT LIFE</text>
+  <rect x="${cx - 24}" y="188" width="48" height="4" rx="2" fill="#B3122F" />
 
-  <!-- Título -->
-  <text x="${cx}" y="290" text-anchor="middle" font-family="${esc(fonts.display)}" font-size="52" fill="#0B0B0A">PEÇA NO BAR</text>
-  <rect x="${cx - 28}" y="308" width="56" height="5" rx="2.5" fill="#B3122F" />
-  <text x="${cx}" y="345" text-anchor="middle" font-family="${esc(fonts.heading)}" font-size="16" fill="#0B0B0A" fill-opacity="0.65">Escaneie o QR e monte seu pedido</text>
-  <text x="${cx}" y="366" text-anchor="middle" font-family="${esc(fonts.heading)}" font-size="16" fill="#0B0B0A" fill-opacity="0.65">sem sair do treino.</text>
+  <!-- Frase -->
+  ${taglineSvg}
 
   <!-- Anilha com o QR -->
   <g transform="translate(${cx}, 515)">
@@ -136,7 +149,7 @@ export function buildPosterSvg(qrPngDataUrl: string, fonts: PosterFonts): string
     <circle cx="-134" cy="0" r="7" fill="#8A5A2B" fill-opacity="0.3" />
     <circle cx="0" cy="134" r="7" fill="#8A5A2B" fill-opacity="0.3" />
     <circle cx="0" cy="-134" r="7" fill="#8A5A2B" fill-opacity="0.3" />
-    <text y="200" text-anchor="middle" font-family="${esc(fonts.heading)}" letter-spacing="3.5" font-size="12" fill="#8A5A2B" fill-opacity="0.55">WOWNESS CLUB</text>
+    <text y="200" text-anchor="middle" font-family="${esc(heading)}" letter-spacing="3.5" font-size="12" fill="#8A5A2B" fill-opacity="0.55">WOWNESS CLUB</text>
 
     <rect x="-115" y="-115" width="230" height="230" rx="20" fill="#E9DCC3" />
     <g transform="translate(-100, -100)" clip-path="url(#qr-clip)">
@@ -145,7 +158,7 @@ export function buildPosterSvg(qrPngDataUrl: string, fonts: PosterFonts): string
   </g>
 
   <!-- Rodapé -->
-  <text x="${cx}" y="716" text-anchor="middle" font-family="${esc(fonts.heading)}" letter-spacing="3.5" font-size="12" fill="#0B0B0A" fill-opacity="0.7">APONTE A CÂMERA DO CELULAR</text>
+  <text x="${cx}" y="716" text-anchor="middle" font-family="${esc(heading)}" letter-spacing="3.5" font-size="12" fill="#0B0B0A" fill-opacity="0.7">APONTE A CÂMERA DO CELULAR</text>
 
   <line x1="${cx - 42}" y1="742" x2="${cx - 14}" y2="742" stroke="#0B0B0A" stroke-opacity="0.4" />
   <text x="${cx}" y="747" text-anchor="middle" font-size="13" fill="#0B0B0A" fill-opacity="0.4">✦</text>

@@ -6,9 +6,12 @@ import { isCategoryAvailableToday } from '@/lib/availability';
 import type { SelectedOption } from '@/lib/types';
 
 export interface SubmitOrderItemInput {
-  itemId: string;
+  /** Presente para itens do cardápio fixo. */
+  itemId?: string;
+  optionIds?: string[];
+  /** Presente para pedidos escritos livremente pelo aluno (fora do cardápio). */
+  custom?: string;
   quantity: number;
-  optionIds: string[];
 }
 
 export interface SubmitOrderInput {
@@ -95,7 +98,29 @@ export async function submitOrder(
   let total = 0;
 
   for (const line of input.items) {
-    const entry = itemMap.get(line.itemId);
+    const qty = Math.min(30, Math.max(1, Math.floor(line.quantity || 1)));
+
+    // Pedido escrito livremente (fora do cardápio fixo): sem preço, sem
+    // catálogo pra validar — só sanitiza e grava o texto do aluno.
+    if (line.custom !== undefined) {
+      const text = line.custom.trim().slice(0, 240);
+      if (text.length < 2)
+        return {
+          ok: false,
+          error: 'custom',
+          message: 'Descreva o que você quer no pedido personalizado.',
+        };
+      allPriced = false;
+      orderItemsPayload.push({
+        item_name: text,
+        quantity: qty,
+        unit_price: null,
+        selected_options: [],
+      });
+      continue;
+    }
+
+    const entry = line.itemId ? itemMap.get(line.itemId) : undefined;
     if (!entry)
       return {
         ok: false,
@@ -117,8 +142,6 @@ export async function submitOrder(
         error: 'category',
         message: `"${category.name}" não está disponível hoje.`,
       };
-
-    const qty = Math.min(30, Math.max(1, Math.floor(line.quantity || 1)));
 
     const selected: SelectedOption[] = [];
     const chosenByGroup = new Map<string, number>();

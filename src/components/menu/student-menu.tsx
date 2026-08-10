@@ -6,6 +6,7 @@ import { Seal, Wordmark } from '@/components/brand';
 import { CartProvider, useCart } from './cart-context';
 import { CategoryCard } from './category-card';
 import { CustomizationSheet } from './customization-sheet';
+import { CustomOrderSheet } from './custom-order-sheet';
 import { CartDrawer } from './cart-drawer';
 
 export function StudentMenu({
@@ -31,6 +32,7 @@ function MenuShell({
 }) {
   const { add } = useCart();
   const [sheet, setSheet] = useState<{ item: MenuItem; color: string } | null>(null);
+  const [customOpen, setCustomOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -77,6 +79,8 @@ function MenuShell({
         {visible.map((c) => (
           <CategoryCard key={c.id} category={c} onAdd={onAdd} />
         ))}
+
+        <CustomOrderTrigger onOpen={() => setCustomOpen(true)} />
       </main>
 
       <Footer />
@@ -90,6 +94,8 @@ function MenuShell({
           onClose={() => setSheet(null)}
         />
       )}
+
+      {customOpen && <CustomOrderSheet onClose={() => setCustomOpen(false)} />}
 
       <CartDrawer
         open={drawerOpen}
@@ -136,6 +142,23 @@ function Header({ barOpen }: { barOpen: boolean }) {
         <div className="hairline" />
       </div>
     </header>
+  );
+}
+
+function CustomOrderTrigger({ onOpen }: { onOpen: () => void }) {
+  return (
+    <section className="surface-card border-dashed px-6 py-6 text-center">
+      <p className="font-heading text-sm uppercase tracking-[0.16em] text-text-hi">
+        Não achou o que quer?
+      </p>
+      <p className="mx-auto mt-1.5 max-w-sm text-sm text-text-mid">
+        Peça do seu jeito — um shake diferente, água, isotônico, energético, o
+        que for. Escreva e o bar prepara.
+      </p>
+      <button className="btn-ghost mt-4 px-5 py-2.5 text-xs" onClick={onOpen}>
+        Personalizar pedido
+      </button>
+    </section>
   );
 }
 
