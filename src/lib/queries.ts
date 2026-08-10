@@ -214,7 +214,7 @@ export async function getDayStats(): Promise<DayStats> {
   const delivered = rows.filter((o) => o.status === 'entregue').length;
   const cancelled = rows.filter((o) => o.status === 'cancelado').length;
 
-  // Itens mais vendidos (exclui pedidos cancelados)
+  // Itens com mais saída (exclui pedidos cancelados)
   const validIds = rows.filter((o) => o.status !== 'cancelado').map((o) => o.id);
   const counts = new Map<string, number>();
   if (validIds.length > 0) {

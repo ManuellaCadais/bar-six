@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { Seal, Wordmark } from '@/components/brand';
+import { loadPosterFonts, buildPosterSvg, rasterizePoster, type PosterFonts } from '@/lib/poster';
 
 const QR_OPTS = {
   errorCorrectionLevel: 'M' as const,
@@ -60,6 +61,19 @@ export function QrGenerator({ defaultUrl }: { defaultUrl: string }) {
   const [url, setUrl] = useState(defaultUrl);
   const [svg, setSvg] = useState('');
   const [png, setPng] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [fonts, setFonts] = useState<PosterFonts | null>(null);
+
+  // Pré-carrega e embute as fontes assim que a página abre — assim o
+  // primeiro clique em "Baixar cartaz" já sai rápido.
+  useEffect(() => {
+    loadPosterFonts()
+      .then(setFonts)
+      .catch(() => {
+        /* se falhar, downloadPoster tenta carregar de novo na hora do clique */
+      });
+  }, []);
 
   useEffect(() => {
     const target = url.trim() || defaultUrl;
@@ -91,9 +105,30 @@ export function QrGenerator({ defaultUrl }: { defaultUrl: string }) {
     const href = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = href;
-    a.download = 'six-qr.svg';
+    a.download = 'six-qr-codigo.svg';
     a.click();
     URL.revokeObjectURL(href);
+  }
+
+  /** Exporta o cartaz inteiro (layout + QR) como PNG em alta resolução. */
+  async function downloadPoster() {
+    if (!png) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const activeFonts = fonts ?? (await loadPosterFonts());
+      if (!fonts) setFonts(activeFonts);
+      const markup = buildPosterSvg(png, activeFonts);
+      const dataUrl = await rasterizePoster(markup, 3);
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = 'six-bar-cartaz.png';
+      a.click();
+    } catch {
+      setExportError('Não foi possível gerar o cartaz. Tente de novo ou use "Imprimir".');
+    } finally {
+      setExporting(false);
+    }
   }
 
   return (
@@ -121,19 +156,36 @@ export function QrGenerator({ defaultUrl }: { defaultUrl: string }) {
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <button className="btn-primary px-5 py-2.5 text-xs" onClick={() => window.print()}>
+          <button
+            className="btn-primary px-5 py-2.5 text-xs"
+            onClick={downloadPoster}
+            disabled={exporting}
+          >
+            {exporting ? 'Gerando…' : 'Baixar cartaz (PNG)'}
+          </button>
+          <button className="btn-ghost px-5 py-2.5 text-xs" onClick={() => window.print()}>
             Imprimir (A5)
           </button>
+        </div>
+
+        {exportError && <p className="mt-2 text-sm text-strawberry">{exportError}</p>}
+
+        <p className="mt-3 text-xs text-text-low">
+          "Baixar cartaz" gera a folha inteira (com o layout) como imagem — ideal
+          pra mandar pra gráfica ou compartilhar digitalmente.
+        </p>
+
+        <div className="mt-4 flex flex-wrap gap-2">
           <a
-            className="btn-ghost px-5 py-2.5 text-xs"
+            className="btn-ghost px-4 py-2 text-xs"
             href={png || undefined}
-            download="six-qr.png"
+            download="six-qr-codigo.png"
             aria-disabled={!png}
           >
-            Baixar PNG
+            Baixar só o QR (PNG)
           </a>
-          <button className="btn-ghost px-5 py-2.5 text-xs" onClick={downloadSvg} disabled={!svg}>
-            Baixar SVG
+          <button className="btn-ghost px-4 py-2 text-xs" onClick={downloadSvg} disabled={!svg}>
+            Baixar só o QR (SVG)
           </button>
         </div>
 
@@ -141,7 +193,7 @@ export function QrGenerator({ defaultUrl }: { defaultUrl: string }) {
         <p className="eyebrow text-[0.6rem] mb-3">Prévia da impressão</p>
       </div>
 
-      {/* Folha imprimível */}
+      {/* Folha imprimível / exportável */}
       <div className="print-sheet mx-auto flex aspect-[148/210] w-full max-w-md flex-col items-center justify-between rounded-2xl bg-cream px-8 py-9 text-ink shadow-soft">
         <div className="text-center text-ink">
           <Seal className="mx-auto h-10 w-10 text-ink/70" />

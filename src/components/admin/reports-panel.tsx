@@ -56,10 +56,10 @@ export function ReportsPanel({ stats }: { stats: OverallStats }) {
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label="Pedidos (todos os tempos)" value={stats.totalOrders} />
-        <StatCard label="Itens vendidos" value={stats.totalItemsSold} />
-        <StatCard label="Bebida mais vendida" value={topOverall?.name ?? '—'} />
+        <StatCard label="Itens com saída" value={stats.totalItemsSold} />
+        <StatCard label="Bebida com mais saídas" value={topOverall?.name ?? '—'} />
         <StatCard
-          label="Variante mais pedida"
+          label="Variante com mais saídas"
           value={
             topVariant
               ? `${topVariant.itemName}${topVariant.variantLabel ? ` — ${topVariant.variantLabel}` : ''}`
