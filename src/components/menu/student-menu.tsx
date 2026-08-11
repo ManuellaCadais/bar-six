@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import type { CategoryWithItems, MenuItem, PublicSettings } from '@/lib/types';
-import { Seal, Wordmark } from '@/components/brand';
 import { CartProvider, useCart } from './cart-context';
 import { CategoryCard } from './category-card';
 import { CustomizationSheet } from './customization-sheet';
@@ -119,10 +118,12 @@ function Header({ barOpen }: { barOpen: boolean }) {
   return (
     <header className="relative overflow-hidden">
       <div className="mx-auto w-full max-w-2xl px-4 pt-8 pb-6 text-center">
-        <Seal className="mx-auto h-16 w-16 text-cream/80" />
-        <div className="mt-4 text-cream">
-          <Wordmark className="text-[2.4rem]" />
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/six-logo.png"
+          alt="SIX Wowness Club"
+          className="mx-auto h-24 w-24 object-contain drop-shadow-sm sm:h-28 sm:w-28"
+        />
         <p className="eyebrow mt-4 text-[0.62rem]">Wowness Club · Cardápio</p>
         <p className="mt-3 text-sm text-text-mid max-w-sm mx-auto text-balance">
           Escaneou, escolheu, enviou. Seu pedido chega ao bar na hora — acompanhe
