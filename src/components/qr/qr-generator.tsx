@@ -202,11 +202,10 @@ export function QrGenerator({ defaultUrl }: { defaultUrl: string }) {
         />
 
         <div className="text-center">
-          <span className="mx-auto mb-3 block h-1 w-12 rounded-full bg-hibiscus" aria-hidden />
-          <p className="font-heading text-base font-semibold uppercase tracking-wide text-ink">
+          <p className="font-heading mt-2 text-base font-semibold uppercase tracking-wide text-ink">
             Escaneou, escolheu, enviou.
           </p>
-          <p className="font-heading mx-auto mt-2 max-w-[15rem] text-[0.8rem] tracking-wide text-ink/60">
+          <p className="font-heading mt-2 whitespace-nowrap text-[0.78rem] tracking-wide text-ink/60">
             Faça seu pedido de onde estiver, o bar receberá na hora.
           </p>
           <p className="font-heading mx-auto mt-1.5 max-w-[15rem] text-[0.85rem] font-semibold tracking-wide text-ink/90">

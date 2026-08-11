@@ -114,11 +114,10 @@ export function buildPosterSvg(qrPngDataUrl: string, assets: PosterAssets): stri
     `<text x="${cx}" y="${y}" text-anchor="middle" font-family="${hf}" font-size="${size}" font-weight="${weight}" letter-spacing="0.3" fill="#0B0B0A" fill-opacity="${opacity}">${esc(line)}</text>`;
 
   const taglineSvg = [
-    text(216, 23, 700, 0.95, 'ESCANEOU, ESCOLHEU, ENVIOU.'),
-    text(246, 15, 400, 0.6, 'Faça seu pedido de onde estiver,'),
-    text(267, 15, 400, 0.6, 'o bar receberá na hora.'),
-    text(297, 16.5, 600, 0.9, 'Acompanhe todo o status'),
-    text(318, 16.5, 600, 0.9, 'pelo celular.'),
+    text(220, 23, 700, 0.95, 'ESCANEOU, ESCOLHEU, ENVIOU.'),
+    text(252, 14.5, 400, 0.6, 'Faça seu pedido de onde estiver, o bar receberá na hora.'),
+    text(286, 16.5, 600, 0.9, 'Acompanhe todo o status'),
+    text(307, 16.5, 600, 0.9, 'pelo celular.'),
   ].join('\n  ');
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
@@ -131,8 +130,6 @@ export function buildPosterSvg(qrPngDataUrl: string, assets: PosterAssets): stri
 
   <!-- Logo (selo oficial SIX Wowness Club) -->
   <image href="${logoDataUrl}" x="${cx - 76}" y="18" width="152" height="152" />
-
-  <rect x="${cx - 24}" y="188" width="48" height="4" rx="2" fill="#B3122F" />
 
   <!-- Frase -->
   ${taglineSvg}
