@@ -143,7 +143,7 @@ export function buildPosterSvg(qrPngDataUrl: string, assets: PosterAssets): stri
     <circle cx="-134" cy="0" r="7" fill="#8A5A2B" fill-opacity="0.3" />
     <circle cx="0" cy="134" r="7" fill="#8A5A2B" fill-opacity="0.3" />
     <circle cx="0" cy="-134" r="7" fill="#8A5A2B" fill-opacity="0.3" />
-    <text y="200" text-anchor="middle" font-family="${esc(heading)}" letter-spacing="3.5" font-size="12" fill="#8A5A2B" fill-opacity="0.55">WOWNESS CLUB</text>
+    <text y="135" text-anchor="middle" font-family="${esc(heading)}" letter-spacing="3.5" font-size="12" fill="#8A5A2B" fill-opacity="0.55">WOWNESS CLUB</text>
 
     <rect x="-115" y="-115" width="230" height="230" rx="20" fill="#E9DCC3" />
     <g transform="translate(-100, -100)" clip-path="url(#qr-clip)">
