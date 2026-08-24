@@ -12,7 +12,18 @@ export const metadata: Metadata = {
   applicationName: 'SIX Wowness Club',
   formatDetection: { telephone: false },
   icons: {
-    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+  },
+  // iOS não lê o manifest.json pra modo standalone — precisa dessas meta tags.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'SIX Wowness Club',
   },
 };
 
@@ -21,6 +32,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
