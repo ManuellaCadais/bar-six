@@ -27,6 +27,7 @@ export default async function BarPage() {
       barOpen={settings.bar_open}
       alertMinutes={settings.alert_minutes}
       divirtaDate={settings.divirta_manual_date}
+      proteinOfDay={settings.protein_of_day}
       todayDate={date}
     />
   );

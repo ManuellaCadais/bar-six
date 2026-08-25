@@ -269,7 +269,7 @@ export function CartDrawer({
             )}
 
             <button
-              className="btn-primary w-full py-4"
+              className="btn-accent w-full py-4"
               onClick={submit}
               disabled={pending || !barOpen}
             >

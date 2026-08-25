@@ -100,6 +100,12 @@ export interface Order {
   order_items?: OrderItem[];
 }
 
+export interface ProteinOfDay {
+  flavor: string;
+  /** Data (YYYY-MM-DD, fuso do bar) em que esse sabor foi definido. */
+  date: string;
+}
+
 // ── Configurações públicas (tabela settings, is_public = true) ──
 export interface PublicSettings {
   bar_open: boolean;
@@ -107,6 +113,8 @@ export interface PublicSettings {
   alert_minutes: number;
   /** Data (YYYY-MM-DD) em que a categoria "Divirta-se" foi liberada manualmente. */
   divirta_manual_date: string | null;
+  /** Sabor da proteína do dia, definido pelo bar. null = nunca definido. */
+  protein_of_day: ProteinOfDay | null;
 }
 
 // ── Tipos do carrinho (estado do cliente) ──

@@ -1,5 +1,5 @@
 import { barNow } from './datetime';
-import type { Category, PublicSettings } from './types';
+import type { Category, ProteinOfDay, PublicSettings } from './types';
 
 /**
  * A categoria está liberada para pedidos hoje?
@@ -29,4 +29,16 @@ export function isCategoryAvailableToday(
   }
 
   return false;
+}
+
+/**
+ * O sabor da proteína do dia ainda vale pra hoje? (o bar define uma vez por
+ * dia; se ninguém atualizou, não mostramos o sabor de ontem pro aluno).
+ */
+export function isProteinOfDayCurrent(
+  pod: ProteinOfDay | null,
+  now: Date = new Date(),
+): boolean {
+  if (!pod) return false;
+  return pod.date === barNow(now).date;
 }

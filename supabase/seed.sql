@@ -275,6 +275,7 @@ insert into bar.settings (key, value, is_public) values
   ('locations',           '["Musculação","Cardio","Área de Lutas","Studio","Recepção","Banheiro feminino","Banheiro masculino","Rooftop"]'::jsonb, true),
   ('alert_minutes',       '8'::jsonb, true),
   ('divirta_manual_date', 'null'::jsonb, true),
+  ('protein_of_day',      'null'::jsonb, true),
   ('bar_pin_hash',        'null'::jsonb, false),
   ('admin_pin_hash',      'null'::jsonb, false)
 on conflict (key) do nothing;

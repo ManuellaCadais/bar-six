@@ -15,9 +15,10 @@ import {
   setBarOpen,
   liberateDivirtaToday,
   clearDivirtaLiberation,
+  setProteinOfDay,
 } from '@/lib/actions/bar';
 import { logout } from '@/lib/actions/auth';
-import type { CategoryWithItems, Order, OrderStatus } from '@/lib/types';
+import type { CategoryWithItems, Order, OrderStatus, ProteinOfDay } from '@/lib/types';
 import { OrderCard } from './order-card';
 import { MenuControl } from './menu-control';
 
@@ -49,6 +50,7 @@ export function BarPanel({
   barOpen: barOpenInitial,
   alertMinutes,
   divirtaDate,
+  proteinOfDay,
   todayDate,
 }: {
   initialOrders: Order[];
@@ -56,6 +58,7 @@ export function BarPanel({
   barOpen: boolean;
   alertMinutes: number;
   divirtaDate: string | null;
+  proteinOfDay: ProteinOfDay | null;
   todayDate: string;
 }) {
   const now = useNow(1000);
@@ -396,6 +399,10 @@ export function BarPanel({
         </div>
       </header>
 
+      <div className="mx-auto max-w-7xl px-4 pt-4">
+        <ProteinOfDayControl initial={proteinOfDay} todayDate={todayDate} />
+      </div>
+
       {/* Stats do dia */}
       <div className="mx-auto max-w-7xl px-4 pt-5">
         <div className="flex flex-wrap items-center gap-3">
@@ -500,6 +507,87 @@ export function BarPanel({
       </main>
 
       <MenuControl open={menuOpen} onClose={() => setMenuOpen(false)} menu={menu} />
+    </div>
+  );
+}
+
+/**
+ * Controle + lembrete da proteína do dia. Enquanto não for definida para
+ * hoje, mostra uma faixa impossível de ignorar (a mesma cor de alerta do
+ * "pedido atrasado"). Depois de definida, vira um chip discreto e editável.
+ */
+function ProteinOfDayControl({
+  initial,
+  todayDate,
+}: {
+  initial: ProteinOfDay | null;
+  todayDate: string;
+}) {
+  const isSetToday = initial?.date === todayDate;
+  const [editing, setEditing] = useState(!isSetToday);
+  const [flavor, setFlavor] = useState(initial?.flavor ?? '');
+  const [saved, setSaved] = useState<ProteinOfDay | null>(initial);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const currentlySet = saved?.date === todayDate;
+
+  function save() {
+    setError(null);
+    startTransition(async () => {
+      const r = await setProteinOfDay(flavor);
+      if (r.ok && r.date && r.flavor) {
+        setSaved({ flavor: r.flavor, date: r.date });
+        setEditing(false);
+      } else {
+        setError(r.message ?? 'Falha ao salvar.');
+      }
+    });
+  }
+
+  if (!editing && currentlySet) {
+    return (
+      <button
+        onClick={() => {
+          setFlavor(saved!.flavor);
+          setEditing(true);
+        }}
+        className="chip border-cream/40 px-4 py-2 text-xs text-cream hover:border-cream/70"
+      >
+        <span className="plate-bullet" />
+        Proteína de hoje: <strong className="font-heading">{saved!.flavor}</strong>
+        <span className="text-text-low">· editar</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-hibiscus/50 bg-hibiscus/10 px-4 py-3">
+      <span className="font-heading text-sm uppercase tracking-wide text-strawberry">
+        {currentlySet ? 'Editar proteína do dia' : 'Defina a proteína do dia'}
+      </span>
+      <input
+        className="field-input w-48 py-2"
+        placeholder="Ex.: Chocolate"
+        value={flavor}
+        onChange={(e) => setFlavor(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && save()}
+        maxLength={60}
+        autoFocus={!currentlySet}
+      />
+      <button
+        className="btn-primary px-4 py-2 text-xs"
+        onClick={save}
+        disabled={pending || !flavor.trim()}
+      >
+        {pending ? 'Salvando…' : 'Salvar'}
+      </button>
+      {currentlySet && (
+        <button className="btn-ghost px-4 py-2 text-xs" onClick={() => setEditing(false)}>
+          Cancelar
+        </button>
+      )}
+      {error && <span className="text-sm text-strawberry">{error}</span>}
     </div>
   );
 }

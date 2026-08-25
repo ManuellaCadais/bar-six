@@ -98,6 +98,11 @@
     @apply btn border border-hibiscus/50 text-strawberry px-5 py-3
            hover:bg-hibiscus/15 active:scale-[0.98];
   }
+  /* CTA de máxima atenção — usado só onde a legibilidade é crítica (ex.: enviar pedido). */
+  .btn-accent {
+    @apply btn bg-mango text-ink px-6 py-3 hover:brightness-95 active:scale-[0.98]
+           shadow-[0_10px_30px_-12px_rgba(242,169,0,0.65)];
+  }
 
   /* Tag +18 discreta */
   .tag-18 {

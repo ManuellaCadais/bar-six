@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import type { CategoryWithItems, MenuItem, PublicSettings } from '@/lib/types';
+import { isProteinOfDayCurrent } from '@/lib/availability';
 import { CartProvider, useCart } from './cart-context';
 import { CategoryCard } from './category-card';
 import { CustomizationSheet } from './customization-sheet';
@@ -68,9 +69,13 @@ function MenuShell({
     }
   }
 
+  const proteinFlavor = isProteinOfDayCurrent(settings.protein_of_day)
+    ? settings.protein_of_day!.flavor
+    : null;
+
   return (
     <div className="min-h-dvh pb-28">
-      <Header barOpen={settings.bar_open} />
+      <Header barOpen={settings.bar_open} proteinFlavor={proteinFlavor} />
 
       {visible.length > 0 && <CategoryNav categories={visible} />}
 
@@ -114,7 +119,13 @@ function MenuShell({
   );
 }
 
-function Header({ barOpen }: { barOpen: boolean }) {
+function Header({
+  barOpen,
+  proteinFlavor,
+}: {
+  barOpen: boolean;
+  proteinFlavor: string | null;
+}) {
   return (
     <header className="relative overflow-hidden">
       <div className="mx-auto w-full max-w-2xl px-4 pt-8 pb-6 text-center">
@@ -129,6 +140,18 @@ function Header({ barOpen }: { barOpen: boolean }) {
           Escaneou, escolheu, enviou. Seu pedido chega ao bar na hora — acompanhe
           pelo celular.
         </p>
+
+        {proteinFlavor && (
+          <div className="card-cream mx-auto mt-5 inline-flex items-center gap-2.5 rounded-full px-5 py-2.5 shadow-glow">
+            <span className="plate-bullet text-ink/55" />
+            <span className="font-heading text-xs uppercase tracking-wide text-ink/70">
+              Proteína do dia
+            </span>
+            <span className="font-heading text-sm font-semibold uppercase tracking-wide text-ink">
+              {proteinFlavor}
+            </span>
+          </div>
+        )}
 
         {!barOpen && (
           <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-hibiscus/45 bg-hibiscus/10 px-4 py-2">

@@ -134,3 +134,29 @@ export async function clearDivirtaLiberation(): Promise<Result> {
   revalidatePath('/');
   return { ok: true };
 }
+
+/** Define o sabor da proteína do dia (fica visível pro aluno até o fim do dia). */
+export async function setProteinOfDay(
+  flavor: string,
+): Promise<Result & { date?: string; flavor?: string }> {
+  await requireRole('bar');
+  const clean = flavor.trim().slice(0, 60);
+  if (!clean) return { ok: false, message: 'Escreva o sabor da proteína do dia.' };
+
+  const sb = getAdminClient();
+  const { date } = barNow();
+  const { error } = await sb.from('settings').upsert(
+    {
+      key: 'protein_of_day',
+      value: { flavor: clean, date },
+      is_public: true,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'key' },
+  );
+  revalidatePath('/');
+  revalidatePath('/bar');
+  return error
+    ? { ok: false, message: 'Falha ao salvar a proteína do dia.' }
+    : { ok: true, date, flavor: clean };
+}

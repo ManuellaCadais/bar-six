@@ -14,6 +14,7 @@ import type {
   OptionRow,
   Order,
   OrderItem,
+  ProteinOfDay,
   PublicSettings,
   SelectedOption,
 } from './types';
@@ -25,7 +26,13 @@ export async function getPublicSettings(): Promise<PublicSettings> {
   const { data } = await sb
     .from('settings')
     .select('key, value')
-    .in('key', ['bar_open', 'locations', 'alert_minutes', 'divirta_manual_date']);
+    .in('key', [
+      'bar_open',
+      'locations',
+      'alert_minutes',
+      'divirta_manual_date',
+      'protein_of_day',
+    ]);
 
   const map = new Map<string, unknown>((data ?? []).map((r) => [r.key, r.value]));
 
@@ -34,6 +41,7 @@ export async function getPublicSettings(): Promise<PublicSettings> {
     locations: (map.get('locations') as string[] | null) ?? DEFAULT_LOCATIONS,
     alert_minutes: (map.get('alert_minutes') as number | null) ?? DEFAULT_ALERT_MINUTES,
     divirta_manual_date: (map.get('divirta_manual_date') as string | null) ?? null,
+    protein_of_day: (map.get('protein_of_day') as ProteinOfDay | null) ?? null,
   };
 }
 
