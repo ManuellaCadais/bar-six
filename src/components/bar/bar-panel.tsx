@@ -19,6 +19,8 @@ import {
 } from '@/lib/actions/bar';
 import { logout } from '@/lib/actions/auth';
 import type { CategoryWithItems, Order, OrderStatus, ProteinOfDay } from '@/lib/types';
+import type { UnitOption } from '@/lib/session';
+import { UnitSwitcher } from '@/components/unit-switcher';
 import { OrderCard } from './order-card';
 import { MenuControl } from './menu-control';
 
@@ -52,6 +54,9 @@ export function BarPanel({
   divirtaDate,
   proteinOfDay,
   todayDate,
+  unitId,
+  unitName,
+  availableUnits,
 }: {
   initialOrders: Order[];
   menu: CategoryWithItems[];
@@ -60,6 +65,9 @@ export function BarPanel({
   divirtaDate: string | null;
   proteinOfDay: ProteinOfDay | null;
   todayDate: string;
+  unitId: string;
+  unitName: string;
+  availableUnits: UnitOption[] | null;
 }) {
   const now = useNow(1000);
   const [orders, setOrders] = useState<Order[]>(initialOrders);
@@ -106,15 +114,20 @@ export function BarPanel({
     return (data as Order) ?? null;
   }, []);
 
-  // Realtime da fila
+  // Realtime da fila — RLS já restringe quem NÃO tem canViewAllUnits a só
+  // receber eventos da própria unidade. Quem tem (Master/Sócio) recebe de
+  // TODAS as unidades pelo Postgres, mas a tela só mostra uma por vez —
+  // por isso o filtro por `unitId` aqui, pra não misturar pedido de outra
+  // unidade na fila enquanto o seletor está numa unidade específica.
   useEffect(() => {
     const sb = getBrowserClient();
     const channel = sb
-      .channel('bar-orders')
+      .channel(`bar-orders-${unitId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'bar', table: 'orders' },
         async (payload) => {
+          if ((payload.new as { unit_id?: string }).unit_id !== unitId) return;
           const order = await fetchOrder((payload.new as { id: string }).id);
           if (order) {
             // O som em si fica a cargo do loop de alarme (efeito abaixo), que
@@ -129,6 +142,7 @@ export function BarPanel({
         'postgres_changes',
         { event: 'UPDATE', schema: 'bar', table: 'orders' },
         async (payload) => {
+          if ((payload.new as { unit_id?: string }).unit_id !== unitId) return;
           const order = await fetchOrder((payload.new as { id: string }).id);
           if (order) upsert(order, false);
         },
@@ -145,7 +159,7 @@ export function BarPanel({
     return () => {
       sb.removeChannel(channel);
     };
-  }, [fetchOrder, upsert]);
+  }, [fetchOrder, upsert, unitId]);
 
   const hasUnseen = useMemo(
     () => orders.some((o) => ACTIVE.includes(o.status) && !o.seen_at),
@@ -326,7 +340,10 @@ export function BarPanel({
           <div className="flex items-center gap-3">
             <Seal className="h-9 w-9 text-cream/80" />
             <div>
-              <p className="eyebrow text-[0.55rem]">Painel do Bar</p>
+              <p className="eyebrow text-[0.55rem]">
+                Painel do Bar
+                {!availableUnits && <span className="text-cream/70"> · {unitName}</span>}
+              </p>
               <p
                 className="font-heading text-lg uppercase leading-none tracking-wide"
                 suppressHydrationWarning
@@ -337,6 +354,10 @@ export function BarPanel({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {availableUnits && (
+              <UnitSwitcher current={unitId} units={availableUnits} />
+            )}
+
             <button
               onClick={toggleBar}
               className={cn(

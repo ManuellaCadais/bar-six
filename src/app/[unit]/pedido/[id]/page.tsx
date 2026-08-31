@@ -1,6 +1,7 @@
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getOrder } from '@/lib/queries';
+import { getOrder, getUnitByCode } from '@/lib/queries';
 import { OrderTracker } from '@/components/order/order-tracker';
 import { Seal } from '@/components/brand';
 
@@ -13,12 +14,15 @@ export const metadata: Metadata = {
 export default async function OrderPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ unit: string; id: string }>;
 }) {
-  const { id } = await params;
+  const { unit: unitCode, id } = await params;
+  const unit = await getUnitByCode(unitCode);
+  if (!unit) notFound();
+
   const order = await getOrder(id);
 
-  if (!order) {
+  if (!order || order.unit_id !== unit.id) {
     return (
       <div className="mx-auto grid min-h-dvh max-w-md place-items-center px-4 text-center">
         <div>
@@ -29,7 +33,7 @@ export default async function OrderPage({
           <p className="mt-2 text-text-mid">
             Este pedido não existe ou foi removido.
           </p>
-          <Link href="/" className="btn-primary mt-6">
+          <Link href={`/${unitCode}`} className="btn-primary mt-6">
             Voltar ao cardápio
           </Link>
         </div>
@@ -37,5 +41,5 @@ export default async function OrderPage({
     );
   }
 
-  return <OrderTracker initial={order} />;
+  return <OrderTracker initial={order} unitCode={unitCode.toLowerCase()} />;
 }

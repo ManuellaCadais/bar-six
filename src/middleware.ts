@@ -1,9 +1,16 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { SESSION_COOKIE, verifySessionToken, roleCanAccess } from '@/lib/auth';
+import { createServerClient } from '@supabase/ssr';
 
 /**
- * Protege /bar e /admin com o cookie de sessão assinado.
- * Páginas de login ficam sempre abertas. Admin também acessa /bar.
+ * Protege /bar e /admin — checagem LEVE aqui (só "está logado?"), rodando
+ * no Edge a cada request. A checagem fina (canViewBar/canManageBarCardapio
+ * + resolução da unidade) acontece uma vez por carregamento de página via
+ * requireRole() (src/lib/session.ts), que já lê o perfil completo — fazer
+ * isso de novo aqui duplicaria a consulta a public.profiles sem necessidade.
+ *
+ * Segue o padrão oficial do @supabase/ssr: o middleware SEMPRE chama
+ * supabase.auth.getUser() (não só lê o cookie) porque é isso que renova o
+ * token de sessão a cada request.
  */
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -12,14 +19,33 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const area: 'bar' | 'admin' = pathname.startsWith('/admin')
-    ? 'admin'
-    : 'bar';
+  let response = NextResponse.next({ request: req });
 
-  const token = req.cookies.get(SESSION_COOKIE)?.value;
-  const role = await verifySessionToken(token);
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          for (const { name, value } of cookiesToSet) req.cookies.set(name, value);
+          response = NextResponse.next({ request: req });
+          for (const { name, value, options } of cookiesToSet) {
+            response.cookies.set(name, value, options);
+          }
+        },
+      },
+    },
+  );
 
-  if (!roleCanAccess(role, area)) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    const area: 'bar' | 'admin' = pathname.startsWith('/admin') ? 'admin' : 'bar';
     const url = req.nextUrl.clone();
     url.pathname = `/${area}/login`;
     url.search = '';
@@ -27,7 +53,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {

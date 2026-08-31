@@ -13,6 +13,7 @@ export type OptionGroupKind = 'single' | 'multiple';
 
 export interface Category {
   id: string;
+  unit_id: string;
   slug: string;
   name: string;
   subtitle: string | null;
@@ -86,6 +87,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  unit_id: string;
   short_code: string;
   customer_name: string;
   location: string;
@@ -115,6 +117,8 @@ export interface PublicSettings {
   divirta_manual_date: string | null;
   /** Sabor da proteína do dia, definido pelo bar. null = nunca definido. */
   protein_of_day: ProteinOfDay | null;
+  /** true = cardápio clonado de outra unidade, ainda não revisado. */
+  menu_review_pending: boolean;
 }
 
 // ── Tipos do carrinho (estado do cliente) ──

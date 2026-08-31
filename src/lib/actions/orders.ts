@@ -1,7 +1,7 @@
 'use server';
 
 import { getAdminClient } from '@/lib/supabase/admin';
-import { getPublicSettings, getAdminMenu } from '@/lib/queries';
+import { getPublicSettings, getAdminMenu, getUnitByCode } from '@/lib/queries';
 import { isCategoryAvailableToday } from '@/lib/availability';
 import type { SelectedOption } from '@/lib/types';
 
@@ -15,6 +15,8 @@ export interface SubmitOrderItemInput {
 }
 
 export interface SubmitOrderInput {
+  /** Código da unidade (slug da URL, ex.: "vnc") — de onde o aluno escaneou o QR. */
+  unitCode: string;
   customerName: string;
   location: string;
   notes?: string;
@@ -42,7 +44,10 @@ export async function submitOrder(
   if (!input.items?.length)
     return { ok: false, error: 'empty', message: 'Seu carrinho está vazio.' };
 
-  const settings = await getPublicSettings();
+  const unit = await getUnitByCode(input.unitCode);
+  if (!unit) return { ok: false, error: 'unit', message: 'Unidade não encontrada.' };
+
+  const settings = await getPublicSettings(unit.id);
   if (!settings.bar_open)
     return {
       ok: false,
@@ -52,7 +57,7 @@ export async function submitOrder(
   if (!settings.locations.includes(location))
     return { ok: false, error: 'location', message: 'Local inválido.' };
 
-  const { menu } = await getAdminMenu();
+  const { menu } = await getAdminMenu(unit.id);
 
   // Lookups: item por id, opção por id (com grupo e item de origem).
   const itemMap = new Map<
@@ -202,6 +207,7 @@ export async function submitOrder(
   const sb = getAdminClient();
   const { data, error } = await sb
     .rpc('create_order', {
+      p_unit_id: unit.id,
       p_customer_name: name.slice(0, 60),
       p_location: location,
       p_notes: input.notes?.trim()?.slice(0, 300) || null,

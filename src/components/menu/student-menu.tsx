@@ -12,13 +12,17 @@ import { CartDrawer } from './cart-drawer';
 export function StudentMenu({
   menu,
   settings,
+  unitCode,
+  unitName,
 }: {
   menu: CategoryWithItems[];
   settings: PublicSettings;
+  unitCode: string;
+  unitName: string;
 }) {
   return (
     <CartProvider>
-      <MenuShell menu={menu} settings={settings} />
+      <MenuShell menu={menu} settings={settings} unitCode={unitCode} unitName={unitName} />
     </CartProvider>
   );
 }
@@ -26,9 +30,13 @@ export function StudentMenu({
 function MenuShell({
   menu,
   settings,
+  unitCode,
+  unitName,
 }: {
   menu: CategoryWithItems[];
   settings: PublicSettings;
+  unitCode: string;
+  unitName: string;
 }) {
   const { add } = useCart();
   const [sheet, setSheet] = useState<{ item: MenuItem; color: string } | null>(null);
@@ -75,7 +83,7 @@ function MenuShell({
 
   return (
     <div className="min-h-dvh pb-28">
-      <Header barOpen={settings.bar_open} proteinFlavor={proteinFlavor} />
+      <Header barOpen={settings.bar_open} proteinFlavor={proteinFlavor} unitName={unitName} />
 
       {visible.length > 0 && <CategoryNav categories={visible} />}
 
@@ -106,6 +114,7 @@ function MenuShell({
         onClose={() => setDrawerOpen(false)}
         locations={settings.locations}
         barOpen={settings.bar_open}
+        unitCode={unitCode}
       />
 
       {toast && (
@@ -122,9 +131,11 @@ function MenuShell({
 function Header({
   barOpen,
   proteinFlavor,
+  unitName,
 }: {
   barOpen: boolean;
   proteinFlavor: string | null;
+  unitName: string;
 }) {
   return (
     <header className="relative overflow-hidden">
@@ -135,7 +146,9 @@ function Header({
           alt="SIX Wowness Club"
           className="mx-auto h-24 w-24 object-contain drop-shadow-sm sm:h-28 sm:w-28"
         />
-        <p className="eyebrow mt-4 text-[0.62rem]">Wowness Club · Cardápio</p>
+        <p className="eyebrow mt-4 text-[0.62rem]">
+          Wowness Club · Cardápio{unitName ? ` · ${unitName}` : ''}
+        </p>
         <p className="mt-3 text-sm text-text-mid max-w-sm mx-auto text-balance">
           Escaneou, escolheu, enviou. Seu pedido chega ao bar na hora — acompanhe
           pelo celular.

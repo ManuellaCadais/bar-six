@@ -1,101 +1,92 @@
 'use server';
 
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { getAdminClient } from '@/lib/supabase/admin';
-import { getSettingValue } from '@/lib/queries';
-import { requireRole } from '@/lib/session';
-import {
-  SESSION_COOKIE,
-  SESSION_TTL_SECONDS,
-  createSessionToken,
-  hashPin,
-  verifyPin,
-  type SessionRole,
-} from '@/lib/auth';
+import { cookies } from 'next/headers';
+import { getAuthClient } from '@/lib/supabase/server';
+import { getBarSession, ACTIVE_UNIT_COOKIE } from '@/lib/session';
 
 export type AuthResult = { ok: true } | { ok: false; message: string };
 
-function pinKey(area: SessionRole): string {
-  return area === 'admin' ? 'admin_pin_hash' : 'bar_pin_hash';
-}
-
-async function setSessionCookie(area: SessionRole): Promise<void> {
-  const token = await createSessionToken(area);
-  const store = await cookies();
-  store.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: SESSION_TTL_SECONDS,
-  });
-}
-
-async function saveHash(area: SessionRole, pin: string): Promise<void> {
-  const sb = getAdminClient();
-  const hash = await hashPin(pin);
-  await sb.from('settings').upsert(
-    {
-      key: pinKey(area),
-      value: hash,
-      is_public: false,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'key' },
-  );
-}
-
-/** Diz se o PIN da área já foi configurado (para o formulário de 1º acesso). */
-export async function pinStatus(area: SessionRole): Promise<{ configured: boolean }> {
-  const hash = await getSettingValue<string | null>(pinKey(area));
-  return { configured: !!hash };
-}
-
-export async function login(area: SessionRole, pin: string): Promise<AuthResult> {
-  const clean = (pin ?? '').trim();
-  if (clean.length < 4) return { ok: false, message: 'PIN inválido.' };
-
-  const hash = await getSettingValue<string | null>(pinKey(area));
-  if (!hash)
-    return { ok: false, message: 'PIN ainda não configurado. Defina o PIN primeiro.' };
-
-  const valid = await verifyPin(clean, hash);
-  if (!valid) return { ok: false, message: 'PIN incorreto.' };
-
-  await setSessionCookie(area);
-  return { ok: true };
-}
-
-/** Primeiro acesso: define o PIN quando ainda não existe. */
-export async function setupPin(area: SessionRole, pin: string): Promise<AuthResult> {
-  const clean = (pin ?? '').trim();
-  if (!/^\d{4,8}$/.test(clean))
-    return { ok: false, message: 'Use um PIN de 4 a 8 dígitos.' };
-
-  const existing = await getSettingValue<string | null>(pinKey(area));
-  if (existing) return { ok: false, message: 'PIN já configurado. Faça login.' };
-
-  await saveHash(area, clean);
-  await setSessionCookie(area);
-  return { ok: true };
-}
-
-/** Troca de PIN (somente admin autenticado pode alterar qualquer PIN). */
-export async function changePin(
-  area: SessionRole,
-  newPin: string,
+/**
+ * Login com a MESMA conta (e-mail + senha) do six-control — é o mesmo
+ * projeto Supabase, mesma auth.users. Depois de autenticar, confirma que
+ * o perfil (public.profiles) tem a permissão certa pra área pedida —
+ * "estar logado" não basta, precisa do cargo certo.
+ */
+export async function signIn(
+  area: 'bar' | 'admin',
+  email: string,
+  password: string,
 ): Promise<AuthResult> {
-  await requireRole('admin');
-  const clean = (newPin ?? '').trim();
-  if (!/^\d{4,8}$/.test(clean))
-    return { ok: false, message: 'Use um PIN de 4 a 8 dígitos.' };
-  await saveHash(area, clean);
+  const cleanEmail = email.trim().toLowerCase();
+  if (!cleanEmail || !password) {
+    return { ok: false, message: 'Informe e-mail e senha.' };
+  }
+
+  const supabase = await getAuthClient();
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: cleanEmail,
+    password,
+  });
+
+  if (signInError) {
+    return { ok: false, message: 'E-mail ou senha incorretos.' };
+  }
+
+  const session = await getBarSession();
+  if (!session) {
+    await supabase.auth.signOut();
+    return {
+      ok: false,
+      message: 'Sua conta não está ativa ou não está vinculada a nenhuma unidade.',
+    };
+  }
+
+  const allowed =
+    area === 'bar' ? session.permissions.canViewBar : session.permissions.canManageBarCardapio;
+  if (!allowed) {
+    await supabase.auth.signOut();
+    return {
+      ok: false,
+      message:
+        area === 'bar'
+          ? 'Sua conta não tem acesso ao painel do bar.'
+          : 'Sua conta não tem acesso ao admin do cardápio.',
+    };
+  }
+
   return { ok: true };
 }
 
 export async function logout(): Promise<void> {
+  const supabase = await getAuthClient();
+  await supabase.auth.signOut();
   const store = await cookies();
-  store.delete(SESSION_COOKIE);
+  store.delete(ACTIVE_UNIT_COOKIE);
   redirect('/');
+}
+
+/**
+ * Troca a unidade que a sessão está visualizando — só pra quem tem
+ * canViewAllUnits (Master, Sócio). Pra qualquer outro papel, a unidade
+ * já vem travada em public.profiles.unit_id e este cookie é ignorado
+ * em getBarSession().
+ */
+export async function setActiveUnit(unitId: string): Promise<AuthResult> {
+  const session = await getBarSession();
+  if (!session || !session.permissions.canViewAllUnits) {
+    return { ok: false, message: 'Sem permissão pra alternar de unidade.' };
+  }
+  const valid = session.availableUnits?.some((u) => u.id === unitId);
+  if (!valid) return { ok: false, message: 'Unidade inválida.' };
+
+  const store = await cookies();
+  store.set(ACTIVE_UNIT_COOKIE, unitId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30,
+  });
+  return { ok: true };
 }

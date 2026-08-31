@@ -20,18 +20,23 @@ import type {
 } from './types';
 
 // ─────────────────────────── Settings ──────────────────────────────
+//  Toda tabela de negócio (categories/orders/settings) carrega unit_id —
+//  cada função abaixo recebe a unidade explicitamente (resolvida em
+//  requireRole()/getBarSession(), nunca inventada aqui).
 
-export async function getPublicSettings(): Promise<PublicSettings> {
+export async function getPublicSettings(unitId: string): Promise<PublicSettings> {
   const sb = getAdminClient();
   const { data } = await sb
     .from('settings')
     .select('key, value')
+    .eq('unit_id', unitId)
     .in('key', [
       'bar_open',
       'locations',
       'alert_minutes',
       'divirta_manual_date',
       'protein_of_day',
+      'menu_review_pending',
     ]);
 
   const map = new Map<string, unknown>((data ?? []).map((r) => [r.key, r.value]));
@@ -42,17 +47,20 @@ export async function getPublicSettings(): Promise<PublicSettings> {
     alert_minutes: (map.get('alert_minutes') as number | null) ?? DEFAULT_ALERT_MINUTES,
     divirta_manual_date: (map.get('divirta_manual_date') as string | null) ?? null,
     protein_of_day: (map.get('protein_of_day') as ProteinOfDay | null) ?? null,
+    menu_review_pending: (map.get('menu_review_pending') as boolean | null) ?? false,
   };
 }
 
-/** Lê uma chave crua de settings (inclui as secretas, ex.: hash de PIN). */
+/** Lê uma chave crua de settings de uma unidade. */
 export async function getSettingValue<T = unknown>(
+  unitId: string,
   key: string,
 ): Promise<T | null> {
   const sb = getAdminClient();
   const { data } = await sb
     .from('settings')
     .select('value')
+    .eq('unit_id', unitId)
     .eq('key', key)
     .maybeSingle();
   return (data?.value ?? null) as T | null;
@@ -114,43 +122,63 @@ function assembleMenu(
     }));
 }
 
-async function fetchMenuTables() {
+/**
+ * Busca as 4 tabelas do cardápio de UMA unidade. menu_items/option_groups/
+ * options não têm unit_id próprio — a unidade é aplicada filtrando
+ * categories primeiro e descendo pelos ids (category_id → menu_item_id →
+ * group_id), por isso os 4 fetches são sequenciais aqui, não paralelos.
+ */
+async function fetchMenuTables(unitId: string) {
   const sb = getAdminClient();
-  const [cats, items, groups, options] = await Promise.all([
-    sb.from('categories').select('*'),
-    sb.from('menu_items').select('*'),
-    sb.from('option_groups').select('*'),
-    sb.from('options').select('*'),
-  ]);
-  return {
-    categories: (cats.data ?? []) as Category[],
-    items: (items.data ?? []) as MenuItem[],
-    groups: (groups.data ?? []).map((g) => ({ ...g, options: [] })) as OptionGroup[],
-    options: (options.data ?? []) as OptionRow[],
-  };
+
+  const { data: catsData } = await sb.from('categories').select('*').eq('unit_id', unitId);
+  const categories = (catsData ?? []) as Category[];
+  const catIds = categories.map((c) => c.id);
+  if (catIds.length === 0) {
+    return { categories, items: [] as MenuItem[], groups: [] as OptionGroup[], options: [] as OptionRow[] };
+  }
+
+  const { data: itemsData } = await sb.from('menu_items').select('*').in('category_id', catIds);
+  const items = (itemsData ?? []) as MenuItem[];
+  const itemIds = items.map((i) => i.id);
+  if (itemIds.length === 0) {
+    return { categories, items, groups: [] as OptionGroup[], options: [] as OptionRow[] };
+  }
+
+  const { data: groupsData } = await sb.from('option_groups').select('*').in('menu_item_id', itemIds);
+  const groups = (groupsData ?? []).map((g) => ({ ...g, options: [] })) as OptionGroup[];
+  const groupIds = groups.map((g) => g.id);
+  if (groupIds.length === 0) {
+    return { categories, items, groups, options: [] as OptionRow[] };
+  }
+
+  const { data: optionsData } = await sb.from('options').select('*').in('group_id', groupIds);
+  const options = (optionsData ?? []) as OptionRow[];
+
+  return { categories, items, groups, options };
 }
 
 /** Cardápio do aluno: apenas itens disponíveis, com flag de dia por categoria. */
-export async function getStudentMenu(): Promise<{
+export async function getStudentMenu(unitId: string): Promise<{
   menu: CategoryWithItems[];
   settings: PublicSettings;
 }> {
   const [{ categories, items, groups, options }, settings] = await Promise.all([
-    fetchMenuTables(),
-    getPublicSettings(),
+    fetchMenuTables(unitId),
+    getPublicSettings(unitId),
   ]);
   const menu = assembleMenu(categories, items, groups, options, settings, false);
   return { menu, settings };
 }
 
 /** Cardápio completo para o admin: inclui itens indisponíveis. */
-export async function getAdminMenu(): Promise<{
+export async function getAdminMenu(unitId: string): Promise<{
   menu: CategoryWithItems[];
   settings: PublicSettings;
 }> {
   const [{ categories, items, groups, options }, settings] = await Promise.all([
-    fetchMenuTables(),
-    getPublicSettings(),
+    fetchMenuTables(unitId),
+    getPublicSettings(unitId),
   ]);
   const menu = assembleMenu(categories, items, groups, options, settings, true);
   return { menu, settings };
@@ -168,6 +196,11 @@ function sortItems(order: Order): Order {
   return order;
 }
 
+/**
+ * Um pedido específico, pelo id. Sem filtro de unidade — quem chama já
+ * sabe o uuid exato (aluno acompanhando o próprio pedido, sem login) ou
+ * é o servidor confirmando um pedido recém-criado. Não expõe lista.
+ */
 export async function getOrder(id: string): Promise<Order | null> {
   const sb = getAdminClient();
   const { data } = await sb
@@ -179,23 +212,25 @@ export async function getOrder(id: string): Promise<Order | null> {
   return sortItems(data as Order);
 }
 
-/** Fila ativa do bar: recebido/preparo/pronto, por ordem de chegada. */
-export async function getActiveOrders(): Promise<Order[]> {
+/** Fila ativa do bar de UMA unidade: recebido/preparo/pronto, por ordem de chegada. */
+export async function getActiveOrders(unitId: string): Promise<Order[]> {
   const sb = getAdminClient();
   const { data } = await sb
     .from('orders')
     .select('*, order_items(*)')
+    .eq('unit_id', unitId)
     .in('status', ['recebido', 'preparo', 'pronto'])
     .order('created_at', { ascending: true });
   return ((data ?? []) as Order[]).map(sortItems);
 }
 
-/** Histórico do dia: entregue/cancelado criados hoje (fuso do bar). */
-export async function getTodayHistory(): Promise<Order[]> {
+/** Histórico do dia de UMA unidade: entregue/cancelado criados hoje (fuso do bar). */
+export async function getTodayHistory(unitId: string): Promise<Order[]> {
   const sb = getAdminClient();
   const { data } = await sb
     .from('orders')
     .select('*, order_items(*)')
+    .eq('unit_id', unitId)
     .in('status', ['entregue', 'cancelado'])
     .gte('created_at', barDayStartISO())
     .order('created_at', { ascending: false });
@@ -209,12 +244,13 @@ export interface DayStats {
   topItems: { name: string; count: number }[];
 }
 
-/** Contadores simples do dia para o painel do bar. */
-export async function getDayStats(): Promise<DayStats> {
+/** Contadores simples do dia para o painel do bar, de UMA unidade. */
+export async function getDayStats(unitId: string): Promise<DayStats> {
   const sb = getAdminClient();
   const { data: orders } = await sb
     .from('orders')
     .select('id, status')
+    .eq('unit_id', unitId)
     .gte('created_at', barDayStartISO());
 
   const rows = (orders ?? []) as { id: string; status: string }[];
@@ -271,13 +307,17 @@ function variantLabel(options: SelectedOption[]): string | null {
 }
 
 /**
- * Estatísticas de todos os tempos (exclui cancelados): ranking por bebida
- * e ranking por variante (bebida + opções), para analisar produtos
- * individualmente (ex.: "Ultracoffee — Caramelo · Água").
+ * Estatísticas de todos os tempos de UMA unidade (exclui cancelados):
+ * ranking por bebida e ranking por variante (bebida + opções), para
+ * analisar produtos individualmente (ex.: "Ultracoffee — Caramelo · Água").
  */
-export async function getOverallItemStats(): Promise<OverallStats> {
+export async function getOverallItemStats(unitId: string): Promise<OverallStats> {
   const sb = getAdminClient();
-  const { data: orders } = await sb.from('orders').select('id, status').neq('status', 'cancelado');
+  const { data: orders } = await sb
+    .from('orders')
+    .select('id, status')
+    .eq('unit_id', unitId)
+    .neq('status', 'cancelado');
   const validIds = ((orders ?? []) as { id: string; status: string }[]).map((o) => o.id);
 
   const byItemCount = new Map<string, number>();
@@ -314,4 +354,40 @@ export async function getOverallItemStats(): Promise<OverallStats> {
   const byVariant = [...byVariantCount.values()].sort((a, b) => b.count - a.count);
 
   return { totalOrders: validIds.length, totalItemsSold, byItem, byVariant };
+}
+
+// ─────────────────────────── Unidades ──────────────────────────────
+
+export interface UnitSummary {
+  id: string;
+  name: string;
+  code: string;
+}
+
+/**
+ * Lista as unidades ativas — lida do schema `public` (six_control) com
+ * service_role, só leitura. Usada pra resolver o slug `/{code}` do
+ * cardápio do aluno e pra popular o seletor de unidade no admin/bar.
+ */
+export async function getActiveUnits(): Promise<UnitSummary[]> {
+  const sb = getAdminClient();
+  const { data } = await sb
+    .schema('public')
+    .from('units')
+    .select('id, name, code')
+    .eq('status', 'ativo')
+    .order('name');
+  return (data ?? []) as UnitSummary[];
+}
+
+export async function getUnitByCode(code: string): Promise<UnitSummary | null> {
+  const sb = getAdminClient();
+  const { data } = await sb
+    .schema('public')
+    .from('units')
+    .select('id, name, code')
+    .eq('code', code.toUpperCase())
+    .eq('status', 'ativo')
+    .maybeSingle();
+  return (data as UnitSummary) ?? null;
 }

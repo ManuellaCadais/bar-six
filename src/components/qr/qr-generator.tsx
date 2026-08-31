@@ -56,8 +56,27 @@ function PlateFrame({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function QrGenerator({ defaultUrl }: { defaultUrl: string }) {
+interface UnitOption {
+  id: string;
+  name: string;
+  code: string;
+}
+
+export function QrGenerator({
+  siteUrl,
+  units,
+}: {
+  siteUrl: string;
+  units: UnitOption[];
+}) {
+  const [unitCode, setUnitCode] = useState(units[0]?.code ?? '');
+  const defaultUrl = unitCode ? `${siteUrl}/${unitCode.toLowerCase()}` : siteUrl;
   const [url, setUrl] = useState(defaultUrl);
+
+  function changeUnit(code: string) {
+    setUnitCode(code);
+    setUrl(code ? `${siteUrl}/${code.toLowerCase()}` : siteUrl);
+  }
   const [svg, setSvg] = useState('');
   const [png, setPng] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -141,6 +160,26 @@ export function QrGenerator({ defaultUrl }: { defaultUrl: string }) {
           Aponta para a URL de produção. Imprima em A5 e espalhe nos tablets e
           pontos da academia.
         </p>
+
+        {units.length > 0 && (
+          <div className="mt-4">
+            <label className="field-label" htmlFor="qr-unit">
+              Unidade
+            </label>
+            <select
+              id="qr-unit"
+              className="field-input py-2"
+              value={unitCode}
+              onChange={(e) => changeUnit(e.target.value)}
+            >
+              {units.map((u) => (
+                <option key={u.id} value={u.code}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="mt-4">
           <label className="field-label" htmlFor="qr-url">

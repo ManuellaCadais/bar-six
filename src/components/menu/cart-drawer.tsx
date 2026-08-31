@@ -16,11 +16,13 @@ export function CartDrawer({
   onClose,
   locations,
   barOpen,
+  unitCode,
 }: {
   open: boolean;
   onClose: () => void;
   locations: string[];
   barOpen: boolean;
+  unitCode: string;
 }) {
   const { lines, total, hasAlcohol, setQty, remove, clear } = useCart();
   const router = useRouter();
@@ -58,6 +60,7 @@ export function CartDrawer({
 
     startTransition(async () => {
       const res = await submitOrder({
+        unitCode,
         customerName: name.trim(),
         location,
         notes: notes.trim() || undefined,
@@ -73,7 +76,7 @@ export function CartDrawer({
       });
       if (res.ok) {
         clear();
-        router.push(`/pedido/${res.orderId}`);
+        router.push(`/${unitCode}/pedido/${res.orderId}`);
       } else {
         setError(res.message);
       }

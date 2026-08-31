@@ -4,9 +4,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/cn';
 import { updateLocations, updateAlertMinutes } from '@/lib/actions/admin';
 import { setBarOpen } from '@/lib/actions/bar';
-import { changePin } from '@/lib/actions/auth';
 import type { PublicSettings } from '@/lib/types';
-import type { SessionRole } from '@/lib/auth';
 import { useAction } from './use-action';
 
 function BarOpenControl({ initial }: { initial: boolean }) {
@@ -118,62 +116,6 @@ function LocationsControl({ initial }: { initial: string[] }) {
   );
 }
 
-function PinControl({ area }: { area: SessionRole }) {
-  const { pending, error, run, setError } = useAction();
-  const [pin, setPin] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [done, setDone] = useState(false);
-
-  function save() {
-    setDone(false);
-    if (pin !== confirm) {
-      setError('Os PINs não coincidem.');
-      return;
-    }
-    run(
-      () => changePin(area, pin),
-      () => {
-        setPin('');
-        setConfirm('');
-        setDone(true);
-      },
-    );
-  }
-
-  return (
-    <div>
-      <label className="field-label">
-        PIN do {area === 'bar' ? 'painel do bar' : 'admin'}
-      </label>
-      <div className="grid grid-cols-2 gap-2">
-        <input
-          className="field-input py-2"
-          type="password"
-          inputMode="numeric"
-          placeholder="Novo PIN"
-          value={pin}
-          onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-          maxLength={8}
-        />
-        <input
-          className="field-input py-2"
-          type="password"
-          inputMode="numeric"
-          placeholder="Confirmar"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value.replace(/\D/g, ''))}
-          maxLength={8}
-        />
-      </div>
-      <button className="btn-ghost mt-2 px-4 py-2 text-xs" disabled={pending} onClick={save}>
-        Alterar PIN
-      </button>
-      {done && <p className="mt-1 text-sm text-cream">PIN atualizado.</p>}
-      {error && <p className="mt-1 text-sm text-strawberry">{error}</p>}
-    </div>
-  );
-}
-
 export function SettingsEditor({ settings }: { settings: PublicSettings }) {
   return (
     <div className="grid gap-5 sm:grid-cols-2">
@@ -189,14 +131,6 @@ export function SettingsEditor({ settings }: { settings: PublicSettings }) {
       <div className="surface-card p-5">
         <h2 className="eyebrow text-[0.6rem] mb-4">Locais</h2>
         <LocationsControl initial={settings.locations} />
-      </div>
-
-      <div className="surface-card p-5 sm:col-span-2">
-        <h2 className="eyebrow text-[0.6rem] mb-4">Segurança — PINs</h2>
-        <div className="grid gap-5 sm:grid-cols-2">
-          <PinControl area="bar" />
-          <PinControl area="admin" />
-        </div>
       </div>
     </div>
   );

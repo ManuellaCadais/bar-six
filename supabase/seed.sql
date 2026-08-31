@@ -1,7 +1,12 @@
 -- ═══════════════════════════════════════════════════════════════════
 --  SIX Wowness Club — Seed do cardápio (transcrito do cardápio físico)
 --  Rode DEPOIS do schema.sql. Seguro para reexecutar (ON CONFLICT).
---  Tudo qualificado com o schema `bar` — não toca em `public`.
+--  Tudo qualificado com o schema `bar` — não toca em `public`, só LÊ
+--  public.units (código 'VNC') pra saber o id da Vila Nova Conceição.
+--
+--  Esse cardápio é só da Vila Nova Conceição — as outras unidades ficam
+--  sem cardápio até alguém clonar esse pra elas pelo /admin (ação
+--  "Clonar cardápio", só pra quem tem canViewAllUnits).
 --
 --  NOTAS DE HONESTIDADE:
 --   • O cardápio físico NÃO exibe preços → todos os itens entram SEM preço.
@@ -12,15 +17,23 @@
 begin;
 
 -- ─────────────────────────── Categorias ────────────────────────────
-insert into bar.categories (slug, name, subtitle, note, color, sort_order, available_days, is_signature) values
-  ('drinks-six-health', 'Drinks Six Health', 'A assinatura da casa', null, '#E9DCC3', 5, null, true),
-  ('cafes',             'Cafés',             null, null, '#B98A4E', 10, null, false),
-  ('pre-treino',        'Pré-Treino',        null, null, '#F2A900', 20, null, false),
-  ('hidrate-se',        'Hidrate-se',        null, null, '#E8A7A0', 30, null, false),
-  ('pos-treino',        'Pós-Treino',        null, null, '#D9743B', 40, null, false),
+--  unit_id vem de public.units pelo código 'VNC' — se essa unidade não
+--  existir ainda em public.units, este bloco não insere nada (a query
+--  de junção com `u` simplesmente não retorna linha nenhuma).
+insert into bar.categories (unit_id, slug, name, subtitle, note, color, sort_order, available_days, is_signature)
+select u.id, v.slug, v.name, v.subtitle, v.note, v.color, v.sort_order, v.available_days, v.is_signature
+from public.units u,
+(values
+  ('drinks-six-health', 'Drinks Six Health', 'A assinatura da casa', null, '#E9DCC3', 5, null::int[], true),
+  ('cafes',             'Cafés',             null, null, '#B98A4E', 10, null::int[], false),
+  ('pre-treino',        'Pré-Treino',        null, null, '#F2A900', 20, null::int[], false),
+  ('hidrate-se',        'Hidrate-se',        null, null, '#E8A7A0', 30, null::int[], false),
+  ('pos-treino',        'Pós-Treino',        null, null, '#D9743B', 40, null::int[], false),
   ('divirta-se',        'Divirta-se',        'Para brindar o treino',
      'Disponível sexta, sábado, domingo e feriados', '#B3122F', 50, array[5,6,0], false)
-on conflict (slug) do nothing;
+) as v(slug, name, subtitle, note, color, sort_order, available_days, is_signature)
+where u.code = 'VNC'
+on conflict (unit_id, slug) do nothing;
 
 -- ──────────────────────── Itens: Drinks Six Health ─────────────────
 insert into bar.menu_items (category_id, name, description, sort_order)
@@ -268,16 +281,20 @@ where c.slug = 'divirta-se' and mi.name = 'Cerveja' and og.name = 'Versão'
 on conflict do nothing;
 
 -- ═══════════════════════════ Settings ══════════════════════════════
---  Hashes de PIN começam null → configure no primeiro acesso a
---  /bar/login e /admin/login (formulário de "Definir PIN").
-insert into bar.settings (key, value, is_public) values
+--  Login agora é a mesma conta do six-control — não há mais PIN/hash
+--  aqui (removido; ver README/plano da integração).
+insert into bar.settings (unit_id, key, value, is_public)
+select u.id, v.key, v.value, v.is_public
+from public.units u,
+(values
   ('bar_open',            'true'::jsonb, true),
   ('locations',           '["Musculação","Cardio","Área de Lutas","Studio","Recepção","Banheiro feminino","Banheiro masculino","Rooftop"]'::jsonb, true),
   ('alert_minutes',       '8'::jsonb, true),
   ('divirta_manual_date', 'null'::jsonb, true),
   ('protein_of_day',      'null'::jsonb, true),
-  ('bar_pin_hash',        'null'::jsonb, false),
-  ('admin_pin_hash',      'null'::jsonb, false)
-on conflict (key) do nothing;
+  ('menu_review_pending', 'false'::jsonb, true)
+) as v(key, value, is_public)
+where u.code = 'VNC'
+on conflict (unit_id, key) do nothing;
 
 commit;

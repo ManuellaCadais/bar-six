@@ -1,8 +1,17 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
- * Cliente Supabase para o navegador (chave anônima pública).
- * Usado para leitura do cardápio e subscriptions de realtime.
+ * Cliente Supabase para o navegador — schema `bar` (dados de negócio).
+ *
+ * Usa `createBrowserClient` (não o `createClient` cru) pra carregar o
+ * cookie de sessão do Supabase Auth automaticamente: quando o bar/admin
+ * está logado, esse client já leva o JWT dele em toda chamada (inclusive
+ * Realtime) — é isso que faz a policy RLS "só vê pedido da própria
+ * unidade" funcionar pra fila do bar. Pro aluno (sem login), continua
+ * funcionando exatamente igual a antes — sem cookie de sessão, o client
+ * simplesmente opera como anônimo.
+ *
  * Singleton para reaproveitar a conexão do canal realtime.
  */
 let browserClient: SupabaseClient<any, 'bar', any> | null = null;
@@ -19,12 +28,11 @@ export function getBrowserClient(): SupabaseClient<any, 'bar', any> {
     );
   }
 
-  browserClient = createClient(url, anonKey, {
+  browserClient = createBrowserClient(url, anonKey, {
     // Este projeto Supabase é compartilhado com outro sistema (six_control),
     // que vive no schema `public`. Tudo do bar mora isolado no schema `bar` —
     // ver supabase/schema.sql. Nunca aponte este client para `public`.
     db: { schema: 'bar' },
-    auth: { persistSession: false, autoRefreshToken: false },
     realtime: { params: { eventsPerSecond: 10 } },
   });
 

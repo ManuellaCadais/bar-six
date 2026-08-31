@@ -30,7 +30,7 @@ function StatusPlate({
   );
 }
 
-export function OrderTracker({ initial }: { initial: Order }) {
+export function OrderTracker({ initial, unitCode }: { initial: Order; unitCode: string }) {
   const [order, setOrder] = useState<Order>(initial);
   const prevStatus = useRef(initial.status);
 
@@ -202,7 +202,7 @@ export function OrderTracker({ initial }: { initial: Order }) {
 
       <div className="mt-6 text-center">
         <Link
-          href="/"
+          href={`/${unitCode}`}
           className="text-sm uppercase tracking-widest text-text-mid hover:text-cream transition"
         >
           ← Voltar ao cardápio
