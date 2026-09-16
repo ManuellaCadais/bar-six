@@ -102,8 +102,36 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+/**
+ * Textos do cartaz — um conjunto por tipo. Usados na prévia da tela E no PNG
+ * exportado, pra os dois nunca divergirem.
+ *  - bar: unidade só com bar (o QR abre o cardápio direto).
+ *  - bar_valet: unidade com valet ligado (o QR abre "O que deseja hoje?").
+ */
+export type PosterVariant = 'bar' | 'bar_valet';
+
+export const POSTER_COPY: Record<
+  PosterVariant,
+  { title: string; line: string; strong: [string, string] }
+> = {
+  bar: {
+    title: 'Escaneou, escolheu, enviou.',
+    line: 'Faça seu pedido de onde estiver, o bar receberá na hora.',
+    strong: ['Acompanhe todo o status', 'pelo celular.'],
+  },
+  bar_valet: {
+    title: 'Bar e valet na palma da mão.',
+    line: 'Peça seu drink ou chame seu carro de onde estiver.',
+    strong: ['Acompanhe tudo em tempo real', 'pelo celular.'],
+  },
+};
+
 /** Monta o SVG completo do cartaz (mesma composição da tela: logo, frase, QR na anilha, rodapé). */
-export function buildPosterSvg(qrPngDataUrl: string, assets: PosterAssets): string {
+export function buildPosterSvg(
+  qrPngDataUrl: string,
+  assets: PosterAssets,
+  variant: PosterVariant = 'bar',
+): string {
   const W = 592;
   const H = 840;
   const cx = W / 2;
@@ -113,11 +141,12 @@ export function buildPosterSvg(qrPngDataUrl: string, assets: PosterAssets): stri
   const text = (y: number, size: number, weight: number, opacity: number, line: string) =>
     `<text x="${cx}" y="${y}" text-anchor="middle" font-family="${hf}" font-size="${size}" font-weight="${weight}" letter-spacing="0.3" fill="#0B0B0A" fill-opacity="${opacity}">${esc(line)}</text>`;
 
+  const copy = POSTER_COPY[variant];
   const taglineSvg = [
-    text(220, 23, 700, 0.95, 'ESCANEOU, ESCOLHEU, ENVIOU.'),
-    text(252, 14.5, 400, 0.6, 'Faça seu pedido de onde estiver, o bar receberá na hora.'),
-    text(286, 16.5, 600, 0.9, 'Acompanhe todo o status'),
-    text(307, 16.5, 600, 0.9, 'pelo celular.'),
+    text(220, 23, 700, 0.95, copy.title.toUpperCase()),
+    text(252, 14.5, 400, 0.6, copy.line),
+    text(286, 16.5, 600, 0.9, copy.strong[0]),
+    text(307, 16.5, 600, 0.9, copy.strong[1]),
   ].join('\n  ');
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">

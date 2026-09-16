@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
-import { loadPosterAssets, buildPosterSvg, rasterizePoster, type PosterAssets } from '@/lib/poster';
+import {
+  loadPosterAssets,
+  buildPosterSvg,
+  rasterizePoster,
+  POSTER_COPY,
+  type PosterAssets,
+  type PosterVariant,
+} from '@/lib/poster';
 
 const QR_OPTS = {
   errorCorrectionLevel: 'M' as const,
@@ -60,6 +67,8 @@ interface UnitOption {
   id: string;
   name: string;
   code: string;
+  /** Valet ligado hoje nesta unidade — define o texto padrão do cartaz. */
+  valet: boolean;
 }
 
 export function QrGenerator({
@@ -72,11 +81,15 @@ export function QrGenerator({
   const [unitCode, setUnitCode] = useState(units[0]?.code ?? '');
   const defaultUrl = unitCode ? `${siteUrl}/${unitCode.toLowerCase()}` : siteUrl;
   const [url, setUrl] = useState(defaultUrl);
+  const [variant, setVariant] = useState<PosterVariant>(units[0]?.valet ? 'bar_valet' : 'bar');
+  const copy = POSTER_COPY[variant];
 
   function changeUnit(code: string) {
     setUnitCode(code);
     setUrl(code ? `${siteUrl}/${code.toLowerCase()}` : siteUrl);
+    setVariant(units.find((u) => u.code === code)?.valet ? 'bar_valet' : 'bar');
   }
+  const unitHasValet = !!units.find((u) => u.code === unitCode)?.valet;
   const [svg, setSvg] = useState('');
   const [png, setPng] = useState('');
   const [exporting, setExporting] = useState(false);
@@ -136,11 +149,11 @@ export function QrGenerator({
     try {
       const activeAssets = assets ?? (await loadPosterAssets());
       if (!assets) setAssets(activeAssets);
-      const markup = buildPosterSvg(png, activeAssets);
+      const markup = buildPosterSvg(png, activeAssets, variant);
       const dataUrl = await rasterizePoster(markup, 3);
       const a = document.createElement('a');
       a.href = dataUrl;
-      a.download = 'six-bar-cartaz.png';
+      a.download = `six-${variant === 'bar_valet' ? 'bar-valet' : 'bar'}-cartaz-${unitCode.toLowerCase()}.png`;
       a.click();
     } catch {
       setExportError('Não foi possível gerar o cartaz. Tente de novo ou use "Imprimir".');
@@ -182,8 +195,39 @@ export function QrGenerator({
         )}
 
         <div className="mt-4">
+          <span className="field-label">Texto do cartaz</span>
+          <div className="flex gap-2">
+            {(
+              [
+                ['bar', 'Só Bar'],
+                ['bar_valet', 'Bar + Valet'],
+              ] as const
+            ).map(([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setVariant(v)}
+                className={
+                  variant === v
+                    ? 'rounded-full bg-cream px-4 py-1.5 text-xs uppercase tracking-widest text-ink'
+                    : 'rounded-full border border-hairline px-4 py-1.5 text-xs uppercase tracking-widest text-text-mid hover:text-text-hi'
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {variant === 'bar_valet' && !unitHasValet && (
+            <p className="mt-2 text-xs text-mango">
+              O valet ainda está desligado nesta unidade — quem escanear vai cair direto no
+              cardápio do bar até alguém ligar o valet no Painel do Valet.
+            </p>
+          )}
+        </div>
+
+        <div className="mt-4">
           <label className="field-label" htmlFor="qr-url">
-            URL do cardápio
+            URL do QR Code
           </label>
           <input
             id="qr-url"
@@ -242,13 +286,13 @@ export function QrGenerator({
 
         <div className="text-center">
           <p className="font-heading mt-2 text-base font-semibold uppercase tracking-wide text-ink">
-            Escaneou, escolheu, enviou.
+            {copy.title}
           </p>
           <p className="font-heading mt-2 whitespace-nowrap text-[0.78rem] tracking-wide text-ink/60">
-            Faça seu pedido de onde estiver, o bar receberá na hora.
+            {copy.line}
           </p>
           <p className="font-heading mx-auto mt-1.5 max-w-[15rem] text-[0.85rem] font-semibold tracking-wide text-ink/90">
-            Acompanhe todo o status pelo celular.
+            {copy.strong.join(' ')}
           </p>
         </div>
 
