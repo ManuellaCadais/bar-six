@@ -5,15 +5,19 @@ import {
   getAdminMenu,
   getPublicSettings,
 } from '@/lib/queries';
-import { requireRole } from '@/lib/session';
+import { getPageAccess } from '@/lib/session';
 import { barNow } from '@/lib/datetime';
 import { BarPanel } from '@/components/bar/bar-panel';
+import { NoAccess } from '@/components/auth/no-access';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Painel do Bar' };
 
 export default async function BarPage() {
-  const session = await requireRole('bar');
+  const { session, allowed } = await getPageAccess('bar');
+  if (!allowed) {
+    return <NoAccess area="bar" fullName={session.fullName} canViewBar={false} />;
+  }
 
   const [active, history, { menu }, settings] = await Promise.all([
     getActiveOrders(session.unitId),
@@ -39,6 +43,7 @@ export default async function BarPage() {
       unitId={session.unitId}
       unitName={session.unitName}
       availableUnits={session.availableUnits}
+      canManageCardapio={session.permissions.canManageBarCardapio}
     />
   );
 }

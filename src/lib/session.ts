@@ -1,5 +1,6 @@
 import 'server-only';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { getAuthClient } from './supabase/server';
 import { getBarPermissions, type BarPermissions } from './permissions';
 
@@ -109,7 +110,23 @@ export async function getBarSession(): Promise<BarSession | null> {
   };
 }
 
-/** Garante a permissão certa e devolve a sessão (com unitId resolvido). Lança se não tiver acesso. */
+/**
+ * Versão pra PÁGINAS (/bar, /admin): nunca lança. Sem sessão válida → manda
+ * pro login da área. Logado mas sem o cargo certo → devolve allowed=false
+ * pra página mostrar "sem acesso" (lançar aqui derrubava a tela inteira com
+ * "Application error", ex.: Sócio clicando em Admin no painel do bar).
+ */
+export async function getPageAccess(
+  area: 'bar' | 'admin',
+): Promise<{ session: BarSession; allowed: boolean }> {
+  const session = await getBarSession();
+  if (!session) redirect(`/${area}/login?next=/${area}`);
+  const allowed =
+    area === 'bar' ? session.permissions.canViewBar : session.permissions.canManageBarCardapio;
+  return { session, allowed };
+}
+
+/** Pra Server Actions: garante a permissão certa e devolve a sessão. Lança se não tiver acesso. */
 export async function requireRole(area: 'bar' | 'admin'): Promise<BarSession> {
   const session = await getBarSession();
   if (!session) {

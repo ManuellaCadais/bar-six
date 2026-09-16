@@ -57,6 +57,7 @@ export function BarPanel({
   unitId,
   unitName,
   availableUnits,
+  canManageCardapio,
 }: {
   initialOrders: Order[];
   menu: CategoryWithItems[];
@@ -68,6 +69,8 @@ export function BarPanel({
   unitId: string;
   unitName: string;
   availableUnits: UnitOption[] | null;
+  /** Só Master/Gestor editam cardápio — o botão Admin some pra quem não pode. */
+  canManageCardapio: boolean;
 }) {
   const now = useNow(1000);
   const [orders, setOrders] = useState<Order[]>(initialOrders);
@@ -405,12 +408,14 @@ export function BarPanel({
             >
               Itens
             </button>
-            <Link
-              href="/admin"
-              className="chip border border-hairline px-3 py-2 text-xs uppercase tracking-widest text-text-mid hover:text-text-hi"
-            >
-              Admin
-            </Link>
+            {canManageCardapio && (
+              <Link
+                href="/admin"
+                className="chip border border-hairline px-3 py-2 text-xs uppercase tracking-widest text-text-mid hover:text-text-hi"
+              >
+                Admin
+              </Link>
+            )}
             <form action={logout}>
               <button className="chip border border-hairline px-3 py-2 text-xs uppercase tracking-widest text-text-mid hover:text-text-hi">
                 Sair

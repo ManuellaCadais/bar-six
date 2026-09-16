@@ -1,13 +1,23 @@
 import type { Metadata } from 'next';
 import { getAdminMenu, getPublicSettings, getOverallItemStats } from '@/lib/queries';
-import { requireRole } from '@/lib/session';
+import { getPageAccess } from '@/lib/session';
 import { AdminDashboard } from '@/components/admin/admin-dashboard';
+import { NoAccess } from '@/components/auth/no-access';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Admin do Cardápio' };
 
 export default async function AdminPage() {
-  const session = await requireRole('admin');
+  const { session, allowed } = await getPageAccess('admin');
+  if (!allowed) {
+    return (
+      <NoAccess
+        area="admin"
+        fullName={session.fullName}
+        canViewBar={session.permissions.canViewBar}
+      />
+    );
+  }
 
   const [{ menu }, settings, stats] = await Promise.all([
     getAdminMenu(session.unitId),
