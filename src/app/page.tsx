@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getActiveUnits } from '@/lib/queries';
+import { getActiveUnits, getLiveMenuUnitIds } from '@/lib/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
  * lista simples de unidades, útil pra testar ou navegar manualmente.
  */
 export default async function UnitPickerPage() {
-  const units = await getActiveUnits();
+  const [units, live] = await Promise.all([getActiveUnits(), getLiveMenuUnitIds()]);
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center px-4 py-12 text-center">
@@ -28,15 +28,25 @@ export default async function UnitPickerPage() {
         {units.length === 0 ? (
           <p className="text-sm text-text-mid">Nenhuma unidade disponível no momento.</p>
         ) : (
-          units.map((u) => (
-            <Link
-              key={u.id}
-              href={`/${u.code.toLowerCase()}`}
-              className="card-cream block w-full rounded-2xl px-5 py-4 text-left font-heading uppercase tracking-wide text-ink transition hover:brightness-95"
-            >
-              {u.name}
-            </Link>
-          ))
+          units.map((u) =>
+            live.has(u.id) ? (
+              <Link
+                key={u.id}
+                href={`/${u.code.toLowerCase()}`}
+                className="card-cream block w-full rounded-2xl px-5 py-4 text-left font-heading uppercase tracking-wide text-ink transition hover:brightness-95"
+              >
+                {u.name}
+              </Link>
+            ) : (
+              <div
+                key={u.id}
+                className="flex w-full items-center justify-between rounded-2xl border border-hairline px-5 py-4 text-left font-heading uppercase tracking-wide text-text-low"
+              >
+                {u.name}
+                <span className="text-[0.6rem] tracking-[0.2em]">Em breve</span>
+              </div>
+            ),
+          )
         )}
       </div>
 

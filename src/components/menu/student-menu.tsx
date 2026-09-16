@@ -21,7 +21,7 @@ export function StudentMenu({
   unitName: string;
 }) {
   return (
-    <CartProvider>
+    <CartProvider unitCode={unitCode}>
       <MenuShell menu={menu} settings={settings} unitCode={unitCode} unitName={unitName} />
     </CartProvider>
   );

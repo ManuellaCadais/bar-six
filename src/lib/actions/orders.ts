@@ -59,6 +59,15 @@ export async function submitOrder(
 
   const { menu } = await getAdminMenu(unit.id);
 
+  // Unidade sem cardápio, ou com cardápio clonado ainda não revisado: não
+  // aceita pedido nenhum (nem personalizado) — cairia num bar que não opera.
+  if (menu.length === 0 || settings.menu_review_pending)
+    return {
+      ok: false,
+      error: 'unit_not_ready',
+      message: 'O cardápio desta unidade ainda não está disponível.',
+    };
+
   // Lookups: item por id, opção por id (com grupo e item de origem).
   const itemMap = new Map<
     string,

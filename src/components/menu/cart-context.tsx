@@ -97,27 +97,35 @@ function makeLineId(): string {
   return `l_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
 }
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+export function CartProvider({
+  children,
+  unitCode,
+}: {
+  children: React.ReactNode;
+  /** Carrinho salvo POR unidade — itens de uma unidade não existem no cardápio de outra. */
+  unitCode: string;
+}) {
   const [state, dispatch] = useReducer(reducer, { lines: [], hydrated: false });
+  const storageKey = `${STORAGE_KEY}_${unitCode}`;
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(storageKey);
       const lines = raw ? (JSON.parse(raw) as CartLine[]) : [];
       dispatch({ type: 'hydrate', lines: Array.isArray(lines) ? lines : [] });
     } catch {
       dispatch({ type: 'hydrate', lines: [] });
     }
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     if (!state.hydrated) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.lines));
+      localStorage.setItem(storageKey, JSON.stringify(state.lines));
     } catch {
       /* ignora quota/negação */
     }
-  }, [state.lines, state.hydrated]);
+  }, [state.lines, state.hydrated, storageKey]);
 
   const add = useCallback((line: Omit<CartLine, 'lineId'>) => {
     dispatch({ type: 'add', line: { ...line, lineId: makeLineId() } });

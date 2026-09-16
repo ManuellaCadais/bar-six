@@ -380,6 +380,21 @@ export async function getActiveUnits(): Promise<UnitSummary[]> {
   return (data ?? []) as UnitSummary[];
 }
 
+/**
+ * Ids das unidades cujo cardápio está no ar pro aluno: tem ao menos uma
+ * categoria E não está com o cardápio clonado pendente de revisão.
+ */
+export async function getLiveMenuUnitIds(): Promise<Set<string>> {
+  const sb = getAdminClient();
+  const [{ data: cats }, { data: pending }] = await Promise.all([
+    sb.from('categories').select('unit_id'),
+    sb.from('settings').select('unit_id, value').eq('key', 'menu_review_pending'),
+  ]);
+  const live = new Set((cats ?? []).map((c) => c.unit_id as string));
+  for (const p of pending ?? []) if (p.value === true) live.delete(p.unit_id as string);
+  return live;
+}
+
 export async function getUnitByCode(code: string): Promise<UnitSummary | null> {
   const sb = getAdminClient();
   const { data } = await sb
