@@ -18,6 +18,7 @@ const NO_ACCESS: Record<Area, string> = {
   bar: 'Sua conta não tem acesso ao painel do bar.',
   admin: 'Sua conta não tem acesso ao admin do cardápio.',
   valet: 'Sua conta não tem acesso ao painel do valet.',
+  equipe: 'Sua conta não tem acesso ao bar nem ao valet.',
 };
 
 export async function signIn(

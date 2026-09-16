@@ -408,6 +408,12 @@ export function BarPanel({
             >
               Itens
             </button>
+            <Link
+              href="/equipe"
+              className="chip border border-hairline px-3 py-2 text-xs uppercase tracking-widest text-text-mid hover:text-text-hi"
+            >
+              Início
+            </Link>
             {canManageCardapio && (
               <Link
                 href="/admin"

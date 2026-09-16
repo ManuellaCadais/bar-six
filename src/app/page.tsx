@@ -61,10 +61,10 @@ export default async function UnitPickerPage() {
           (digitando o domínio) chega no painel sem precisar adivinhar a URL.
           É rota protegida por login — pro aluno é só um link que pede senha. */}
       <Link
-        href="/bar"
+        href="/equipe"
         className="mt-10 text-[0.6rem] uppercase tracking-[0.2em] text-text-low transition hover:text-text-mid"
       >
-        Equipe SIX · Painel do bar
+        Equipe SIX · Bar / Valet
       </Link>
     </div>
   );

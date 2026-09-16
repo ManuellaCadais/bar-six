@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { getBrowserClient } from '@/lib/supabase/browser';
 import { useNow } from '@/lib/use-now';
@@ -216,6 +217,12 @@ export function ValetPanel({
             >
               {soundOn ? '♪ Som ativo' : 'Ativar som'}
             </button>
+            <Link
+              href="/equipe"
+              className="chip border border-hairline px-3 py-2 text-xs uppercase tracking-widest text-text-mid hover:text-text-hi"
+            >
+              Início
+            </Link>
             <form action={logout}>
               <button className="chip border border-hairline px-3 py-2 text-xs uppercase tracking-widest text-text-mid hover:text-text-hi">
                 Sair

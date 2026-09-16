@@ -19,8 +19,12 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  const title =
-    area === 'bar' ? 'Painel do Bar' : area === 'admin' ? 'Admin do Cardápio' : 'Painel do Valet';
+  const title = {
+    bar: 'Painel do Bar',
+    admin: 'Admin do Cardápio',
+    valet: 'Painel do Valet',
+    equipe: 'Bar / Valet',
+  }[area];
 
   function submit(e: React.FormEvent) {
     e.preventDefault();

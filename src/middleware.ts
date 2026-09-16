@@ -15,7 +15,12 @@ import { createServerClient } from '@supabase/ssr';
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  if (pathname === '/bar/login' || pathname === '/admin/login' || pathname === '/valet/login') {
+  if (
+    pathname === '/bar/login' ||
+    pathname === '/admin/login' ||
+    pathname === '/valet/login' ||
+    pathname === '/equipe/login'
+  ) {
     return NextResponse.next();
   }
 
@@ -49,7 +54,9 @@ export async function middleware(req: NextRequest) {
       ? 'admin'
       : pathname.startsWith('/valet')
         ? 'valet'
-        : 'bar';
+        : pathname.startsWith('/equipe')
+          ? 'equipe'
+          : 'bar';
     const url = req.nextUrl.clone();
     url.pathname = `/${area}/login`;
     url.search = '';
@@ -61,5 +68,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/bar', '/bar/:path*', '/admin', '/admin/:path*', '/valet', '/valet/:path*'],
+  matcher: ['/bar', '/bar/:path*', '/admin', '/admin/:path*', '/valet', '/valet/:path*', '/equipe', '/equipe/:path*'],
 };

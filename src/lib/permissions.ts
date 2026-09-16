@@ -78,11 +78,12 @@ export function getBarPermissions(
   return { ...base };
 }
 
-export type Area = 'bar' | 'admin' | 'valet';
+export type Area = 'bar' | 'admin' | 'valet' | 'equipe';
 
-/** Permissão que libera cada área protegida. */
+/** Permissão que libera cada área protegida. `equipe` = porta de entrada (card do portal). */
 export function canEnter(area: Area, p: BarPermissions): boolean {
   if (area === 'bar') return p.canViewBar;
   if (area === 'admin') return p.canManageBarCardapio;
-  return p.canViewValet;
+  if (area === 'valet') return p.canViewValet;
+  return p.canViewBar || p.canManageBarCardapio || p.canViewValet;
 }
