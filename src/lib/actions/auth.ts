@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getAuthClient } from '@/lib/supabase/server';
 import { getBarSession, ACTIVE_UNIT_COOKIE } from '@/lib/session';
+import { canEnter, type Area } from '@/lib/permissions';
 
 export type AuthResult = { ok: true } | { ok: false; message: string };
 
@@ -13,8 +14,14 @@ export type AuthResult = { ok: true } | { ok: false; message: string };
  * o perfil (public.profiles) tem a permissão certa pra área pedida —
  * "estar logado" não basta, precisa do cargo certo.
  */
+const NO_ACCESS: Record<Area, string> = {
+  bar: 'Sua conta não tem acesso ao painel do bar.',
+  admin: 'Sua conta não tem acesso ao admin do cardápio.',
+  valet: 'Sua conta não tem acesso ao painel do valet.',
+};
+
 export async function signIn(
-  area: 'bar' | 'admin',
+  area: Area,
   email: string,
   password: string,
 ): Promise<AuthResult> {
@@ -42,17 +49,9 @@ export async function signIn(
     };
   }
 
-  const allowed =
-    area === 'bar' ? session.permissions.canViewBar : session.permissions.canManageBarCardapio;
-  if (!allowed) {
+  if (!canEnter(area, session.permissions)) {
     await supabase.auth.signOut();
-    return {
-      ok: false,
-      message:
-        area === 'bar'
-          ? 'Sua conta não tem acesso ao painel do bar.'
-          : 'Sua conta não tem acesso ao admin do cardápio.',
-    };
+    return { ok: false, message: NO_ACCESS[area] };
   }
 
   return { ok: true };

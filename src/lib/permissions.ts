@@ -4,16 +4,18 @@
  * bar-six e six_control são repositórios separados que só compartilham o
  * mesmo projeto Supabase (mesma auth.users / public.profiles).
  *
- * Só as flags que o bar-six realmente usa entram aqui:
+ * Só as flags que este app realmente usa entram aqui:
  *  - canViewBar: vê o card no portal do SIX OS + entra em /bar (fila).
  *  - canManageBarCardapio: entra em /admin (cardápio, ajustes, abre/fecha
  *    o bar) — mais sensível que canViewBar.
+ *  - canViewValet: entra em /valet (fila de carros, fotos, entrega).
+ *  - canManageValet: liga/desliga o valet da unidade.
  *  - canViewAllUnits: mesmo conceito do six_control — quem tem essa flag
  *    enxerga/alterna entre TODAS as unidades em vez de ficar travado na
  *    própria (via profile.unit_id).
  *
- * Se um dia o bar-six precisar de outra flag do six_control, ela entra
- * aqui do mesmo jeito — copiada, não importada.
+ * Se um dia precisar de outra flag do six_control, ela entra aqui do
+ * mesmo jeito — copiada, não importada.
  */
 
 export type Role =
@@ -29,18 +31,28 @@ export type Role =
 export interface BarPermissions {
   canViewBar: boolean;
   canManageBarCardapio: boolean;
+  canViewValet: boolean;
+  canManageValet: boolean;
   canViewAllUnits: boolean;
 }
 
+const NONE: BarPermissions = {
+  canViewBar: false,
+  canManageBarCardapio: false,
+  canViewValet: false,
+  canManageValet: false,
+  canViewAllUnits: false,
+};
+
 const BASE: Record<Role, BarPermissions> = {
-  global_total: { canViewBar: true, canManageBarCardapio: true, canViewAllUnits: true },
-  total: { canViewBar: true, canManageBarCardapio: true, canViewAllUnits: false },
-  socio: { canViewBar: true, canManageBarCardapio: false, canViewAllUnits: true },
-  administrativo: { canViewBar: false, canManageBarCardapio: false, canViewAllUnits: false },
-  lideranca: { canViewBar: false, canManageBarCardapio: false, canViewAllUnits: false },
-  auditoria: { canViewBar: false, canManageBarCardapio: false, canViewAllUnits: true },
-  contabilidade: { canViewBar: false, canManageBarCardapio: false, canViewAllUnits: true },
-  funcionario: { canViewBar: false, canManageBarCardapio: false, canViewAllUnits: false },
+  global_total: { canViewBar: true, canManageBarCardapio: true, canViewValet: true, canManageValet: true, canViewAllUnits: true },
+  total: { canViewBar: true, canManageBarCardapio: true, canViewValet: true, canManageValet: true, canViewAllUnits: false },
+  socio: { ...NONE, canViewBar: true, canViewValet: true, canViewAllUnits: true },
+  administrativo: { ...NONE },
+  lideranca: { ...NONE },
+  auditoria: { ...NONE, canViewAllUnits: true },
+  contabilidade: { ...NONE, canViewAllUnits: true },
+  funcionario: { ...NONE },
 };
 
 /**
@@ -58,8 +70,19 @@ export function getBarPermissions(
     return {
       canViewBar: overrides.canViewBar ?? base.canViewBar,
       canManageBarCardapio: overrides.canManageBarCardapio ?? base.canManageBarCardapio,
+      canViewValet: overrides.canViewValet ?? base.canViewValet,
+      canManageValet: overrides.canManageValet ?? base.canManageValet,
       canViewAllUnits: base.canViewAllUnits, // não faz sentido um funcionário ganhar isso por override
     };
   }
   return { ...base };
+}
+
+export type Area = 'bar' | 'admin' | 'valet';
+
+/** Permissão que libera cada área protegida. */
+export function canEnter(area: Area, p: BarPermissions): boolean {
+  if (area === 'bar') return p.canViewBar;
+  if (area === 'admin') return p.canManageBarCardapio;
+  return p.canViewValet;
 }

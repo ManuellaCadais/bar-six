@@ -2,7 +2,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getAuthClient } from './supabase/server';
-import { getBarPermissions, type BarPermissions } from './permissions';
+import { getBarPermissions, canEnter, type Area, type BarPermissions } from './permissions';
 
 /** Cookie que guarda qual unidade um usuário com canViewAllUnits está visualizando agora. */
 export const ACTIVE_UNIT_COOKIE = 'six_active_unit';
@@ -117,24 +117,20 @@ export async function getBarSession(): Promise<BarSession | null> {
  * "Application error", ex.: Sócio clicando em Admin no painel do bar).
  */
 export async function getPageAccess(
-  area: 'bar' | 'admin',
+  area: Area,
 ): Promise<{ session: BarSession; allowed: boolean }> {
   const session = await getBarSession();
   if (!session) redirect(`/${area}/login?next=/${area}`);
-  const allowed =
-    area === 'bar' ? session.permissions.canViewBar : session.permissions.canManageBarCardapio;
-  return { session, allowed };
+  return { session, allowed: canEnter(area, session.permissions) };
 }
 
 /** Pra Server Actions: garante a permissão certa e devolve a sessão. Lança se não tiver acesso. */
-export async function requireRole(area: 'bar' | 'admin'): Promise<BarSession> {
+export async function requireRole(area: Area): Promise<BarSession> {
   const session = await getBarSession();
   if (!session) {
     throw new Error('Sessão expirada ou sem permissão. Faça login novamente.');
   }
-  const allowed =
-    area === 'bar' ? session.permissions.canViewBar : session.permissions.canManageBarCardapio;
-  if (!allowed) {
+  if (!canEnter(area, session.permissions)) {
     throw new Error('Você não tem permissão para acessar esta área.');
   }
   return session;

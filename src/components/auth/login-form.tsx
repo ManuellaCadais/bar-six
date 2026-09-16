@@ -4,12 +4,13 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from '@/lib/actions/auth';
 import { Seal } from '@/components/brand';
+import type { Area } from '@/lib/permissions';
 
 export function LoginForm({
   area,
   next,
 }: {
-  area: 'bar' | 'admin';
+  area: Area;
   next: string;
 }) {
   const router = useRouter();
@@ -18,7 +19,8 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  const title = area === 'bar' ? 'Painel do Bar' : 'Admin do Cardápio';
+  const title =
+    area === 'bar' ? 'Painel do Bar' : area === 'admin' ? 'Admin do Cardápio' : 'Painel do Valet';
 
   function submit(e: React.FormEvent) {
     e.preventDefault();

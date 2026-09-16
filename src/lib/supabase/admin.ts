@@ -23,3 +23,20 @@ export function getAdminClient(): SupabaseClient<any, 'bar', any> {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
+
+/** Mesmo cliente service_role, apontado pro schema `valet` (tickets, fotos, ajustes). */
+export function getValetClient(): SupabaseClient<any, 'valet', any> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) {
+    throw new Error(
+      'Variáveis NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY ausentes. Configure o ambiente do servidor.',
+    );
+  }
+  return createClient(url, serviceKey, {
+    db: { schema: 'valet' },
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+export const VALET_BUCKET = 'valet-photos';

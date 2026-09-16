@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getStudentMenu, getUnitByCode } from '@/lib/queries';
-import { StudentMenu } from '@/components/menu/student-menu';
+import { getUnitByCode } from '@/lib/queries';
+import { isValetEnabled } from '@/lib/valet/queries';
+import { UnitMenu } from './menu-page';
 
 // Sempre renderiza fresco: disponibilidade de itens/categorias muda sem deploy.
 export const dynamic = 'force-dynamic';
@@ -14,10 +15,14 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { unit } = await params;
   const found = await getUnitByCode(unit);
-  return { title: found ? `Cardápio · ${found.name}` : 'Cardápio' };
+  return { title: found ? `SIX · ${found.name}` : 'SIX' };
 }
 
-export default async function UnitMenuPage({
+/**
+ * Destino do QR Code da unidade. Sem valet ligado: abre o cardápio direto
+ * (como sempre foi). Com valet ligado: "O que deseja hoje?" — Bar ou Valet.
+ */
+export default async function UnitHomePage({
   params,
 }: {
   params: Promise<{ unit: string }>;
@@ -26,42 +31,34 @@ export default async function UnitMenuPage({
   const unit = await getUnitByCode(unitCode);
   if (!unit) notFound();
 
-  const { menu, settings } = await getStudentMenu(unit.id);
-
-  // Sem cardápio, ou clonado e ainda não revisado: aluno não vê nem pede nada
-  // (o servidor também recusa — ver submitOrder).
-  if (menu.length === 0 || settings.menu_review_pending) {
-    return <MenuComingSoon unitName={unit.name} />;
+  if (!(await isValetEnabled(unit.id))) {
+    return <UnitMenu unit={unit} backToChooser={false} />;
   }
 
-  return (
-    <StudentMenu
-      menu={menu}
-      settings={settings}
-      unitCode={unit.code.toLowerCase()}
-      unitName={unit.name}
-    />
-  );
-}
-
-function MenuComingSoon({ unitName }: { unitName: string }) {
+  const slug = unit.code.toLowerCase();
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center px-4 py-12 text-center">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/six-logo.png" alt="SIX Wowness Club" className="h-24 w-24 object-contain" />
-      <p className="eyebrow mt-4 text-[0.62rem]">Wowness Club · {unitName}</p>
-      <h1 className="mt-2 font-heading text-xl uppercase tracking-wide text-text-hi">
-        Cardápio em breve
-      </h1>
-      <p className="mt-3 text-sm text-text-mid">
-        O cardápio do bar desta unidade ainda está sendo preparado.
-      </p>
-      <Link
-        href="/"
-        className="mt-8 text-[0.65rem] uppercase tracking-[0.2em] text-text-low hover:text-text-mid"
-      >
-        ← Outras unidades
-      </Link>
+      <img src="/six-logo.png" alt="SIX Wowness Club" className="h-24 w-24 object-contain drop-shadow-sm" />
+      <p className="eyebrow mt-4 text-[0.62rem]">Wowness Club · {unit.name}</p>
+      <h1 className="mt-2 font-heading text-2xl uppercase tracking-wide text-text-hi">O que deseja hoje?</h1>
+
+      <div className="mt-8 w-full space-y-3">
+        <Link
+          href={`/${slug}/cardapio`}
+          className="card-cream block w-full rounded-2xl px-6 py-5 text-left text-ink transition hover:brightness-95"
+        >
+          <span className="block font-heading text-xl uppercase tracking-wide">Pedido para o Bar</span>
+          <span className="block text-sm text-ink/70">Drinks, cafés e shakes — entregues onde você estiver.</span>
+        </Link>
+        <Link
+          href={`/${slug}/valet`}
+          className="card-cream block w-full rounded-2xl px-6 py-5 text-left text-ink transition hover:brightness-95"
+        >
+          <span className="block font-heading text-xl uppercase tracking-wide">Valet</span>
+          <span className="block text-sm text-ink/70">Deixe seu carro ou peça pra buscarem na saída.</span>
+        </Link>
+      </div>
     </div>
   );
 }

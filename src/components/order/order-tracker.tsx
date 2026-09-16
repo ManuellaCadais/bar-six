@@ -202,7 +202,7 @@ export function OrderTracker({ initial, unitCode }: { initial: Order; unitCode: 
 
       <div className="mt-6 text-center">
         <Link
-          href={`/${unitCode}`}
+          href={`/${unitCode}/cardapio`}
           className="text-sm uppercase tracking-widest text-text-mid hover:text-cream transition"
         >
           ← Voltar ao cardápio

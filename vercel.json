@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/valet-cleanup",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}

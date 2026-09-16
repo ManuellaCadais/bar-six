@@ -15,7 +15,7 @@ export function AreaError({
 }: {
   error: Error & { digest?: string };
   reset: () => void;
-  area: 'bar' | 'admin';
+  area: 'bar' | 'admin' | 'valet';
 }) {
   useEffect(() => {
     console.error(error);
@@ -26,7 +26,8 @@ export function AreaError({
       <div className="w-full max-w-sm text-center">
         <h1 className="font-heading text-2xl uppercase tracking-wide">Algo deu errado</h1>
         <p className="mt-3 text-sm text-text-mid">
-          Não foi possível carregar {area === 'bar' ? 'o painel do bar' : 'o admin'}. Tente de
+          Não foi possível carregar{' '}
+          {area === 'bar' ? 'o painel do bar' : area === 'admin' ? 'o admin' : 'o painel do valet'}. Tente de
           novo; se continuar, entre novamente com sua conta.
         </p>
         <div className="mt-6 flex flex-col gap-2">

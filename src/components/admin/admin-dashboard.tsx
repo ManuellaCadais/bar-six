@@ -65,7 +65,7 @@ export function AdminDashboard({
               Painel do bar
             </Link>
             <Link
-              href={`/${unitCode}`}
+              href={`/${unitCode.toLowerCase()}/cardapio`}
               className="chip border border-hairline px-3 py-2 text-xs uppercase tracking-widest text-text-mid hover:text-text-hi"
             >
               Ver cardápio

@@ -12,11 +12,12 @@ export function NoAccess({
   fullName,
   canViewBar,
 }: {
-  area: 'bar' | 'admin';
+  area: 'bar' | 'admin' | 'valet';
   fullName: string | null;
   canViewBar: boolean;
 }) {
-  const what = area === 'bar' ? 'ao painel do bar' : 'ao admin do cardápio';
+  const what =
+    area === 'bar' ? 'ao painel do bar' : area === 'admin' ? 'ao admin do cardápio' : 'ao painel do valet';
 
   return (
     <div className="grid min-h-dvh place-items-center px-4">

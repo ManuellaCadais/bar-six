@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getActiveUnits, getLiveMenuUnitIds } from '@/lib/queries';
+import { getValetEnabledUnitIds } from '@/lib/valet/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +10,13 @@ export const dynamic = 'force-dynamic';
  * lista simples de unidades, útil pra testar ou navegar manualmente.
  */
 export default async function UnitPickerPage() {
-  const [units, live] = await Promise.all([getActiveUnits(), getLiveMenuUnitIds()]);
+  const [units, menuLive, valetLive] = await Promise.all([
+    getActiveUnits(),
+    getLiveMenuUnitIds(),
+    getValetEnabledUnitIds(),
+  ]);
+  // Unidade "no ar" pro aluno: tem cardápio publicado OU valet ligado.
+  const live = new Set([...menuLive, ...valetLive]);
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center px-4 py-12 text-center">
